@@ -19,4 +19,9 @@ export class AppController {
   nextTurn(@Body() body: { userId: number }) {
     return this.appService.nextTurn(body.userId);
   }
+
+  @Post('battle')
+  battle(@Body() body: { userId: number, monsterId: number, action: string, useLucky?: boolean }) {
+    return this.appService.battleAction(body.userId, body.monsterId, body.action, body.useLucky || false);
+  }
 }

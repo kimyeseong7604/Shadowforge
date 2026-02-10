@@ -1,10 +1,14 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum GameState {
-    SELECTING = 'SELECTING', // 선택지 고르는 중
-    BATTLE = 'BATTLE',       // 전투 중
-    SHOP = 'SHOP',           // 상점 이용 중
-    EVENT = 'EVENT',         // 이벤트 중
+    SELECTING = 'SELECTING',
+    BATTLE = 'BATTLE',
+    BOSS_BATTLE = 'BOSS_BATTLE',
+    SHOP = 'SHOP',
+    REST = 'REST',
+    TREASURE = 'TREASURE',
+    GAME_CLEAR = 'GAME_CLEAR',
+    GAME_OVER = 'GAME_OVER',
 }
 
 @Entity()
@@ -24,5 +28,9 @@ export class User {
         hp: number;
         maxHp: number;
         str: number;
+        agi: number;
+        stunned: boolean; // ✨ 기절 상태 (추가됨)
+        luckyCooldown: number; // 🍀 럭키 어택 쿨타임 (0일 때 사용 가능)
+        gold: number;
     };
 }
