@@ -9,6 +9,37 @@ export class ShopService {
         private readonly userService: UserService,
     ) { }
 
+    async getShopItems(userId: number) {
+        const user = await this.userService.findOne(userId);
+        if (!user) throw new NotFoundException(`User ${userId} not found`);
+
+        const heartCount = user.gameData.maxHpBonusCount || 0;
+        const potionCount = user.gameData.potionPurchaseCount || 0;
+
+        return {
+            items: [
+                {
+                    id: 'POTION',
+                    name: '포션',
+                    currentPrice: Math.floor(10 * Math.pow(1.2, potionCount)),
+                    desc: 'HP +20'
+                },
+                {
+                    id: 'HEART',
+                    name: '생명의 정수',
+                    currentPrice: Math.floor(50 * Math.pow(1.5, heartCount)),
+                    desc: '최대 HP +20'
+                },
+                { id: 'NORMAL_SWORD', name: '노말 검', currentPrice: 15, desc: '공격력 +2' },
+                { id: 'SWORD', name: '검', currentPrice: 25, desc: '공격력 +3' },
+                { id: 'RARE_SWORD', name: '레어 검', currentPrice: 45, desc: '공격력 +5' },
+                { id: 'EPIC_SWORD', name: '에픽 검', currentPrice: 80, desc: '공격력 +8' },
+                { id: 'UNIQUE_SWORD', name: '유니크 검', currentPrice: 140, desc: '공격력 +12' },
+                { id: 'LEGENDARY_SWORD', name: '레전더리 검', currentPrice: 220, desc: '공격력 +16' },
+            ]
+        };
+    }
+
     async usePotion(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);

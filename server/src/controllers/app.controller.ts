@@ -63,6 +63,13 @@ export class AppController {
     return this.shopService.equipItem(body.userId, body.itemId);
   }
 
+  @Get('shop')
+  getShopItems(@Body() body: { userId: number }) {
+    // Note: userId is usually from auth, but using body for simplicity if it's a GET with query or similar.
+    // However, AppController uses Body for simple dev setup.
+    return this.shopService.getShopItems(body.userId || 1);
+  }
+
   @Post('buy-item')
   buyItem(@Body() body: { userId: number, itemId: string }) {
     return this.shopService.buyItem(body.userId, body.itemId);
