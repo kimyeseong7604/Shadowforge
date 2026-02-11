@@ -17,6 +17,7 @@ export const WEAPON_BOOK: Record<string, ItemSpec> = {
 
 export const SHOP_LIST = [
     { type: 'POTION', id: 'POTION', name: '포션', price: 10, desc: 'HP +20' },
+    { type: 'HEART', id: 'HEART', name: '생명의 정수', price: 50, desc: '최대 HP +20' },
     { type: 'WEAPON', ...WEAPON_BOOK.NORMAL_SWORD },
     { type: 'WEAPON', ...WEAPON_BOOK.SWORD },
     { type: 'WEAPON', ...WEAPON_BOOK.RARE_SWORD },

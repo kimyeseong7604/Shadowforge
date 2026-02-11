@@ -39,5 +39,7 @@ export class User {
         potions: number;            // 포션 개수
         inventory: string[];        // 획득한 무기 ID 목록 (예: ['NORMAL_SWORD', 'RARE_SWORD'])
         equippedWeapon: string | null; // 현재 장착 중인 무기 ID (없으면 null)
+        maxHpBonusCount: number;    // ✨ 최대 체력 증가 아이템 구매 횟수
+        potionPurchaseCount: number; // ✨ 포션 구매 횟수
     };
 }

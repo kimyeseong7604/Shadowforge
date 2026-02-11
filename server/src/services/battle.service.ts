@@ -199,7 +199,17 @@ export class BattleService {
         let result = 'CONTINUE';
         if (monster.hp === 0) {
             result = 'WIN';
-            logs.push(user.gameData.state === GameState.BOSS_BATTLE ? `🏆 군주 ${monster.name} 토벌 완료!` : `🎉 승리!`);
+
+            if (user.gameData.state === GameState.BOSS_BATTLE) {
+                logs.push(`🏆 군주 ${monster.name} 토벌 완료!`);
+                // 🎁 보스 처치 자동 보상: 최대 체력 +20
+                user.gameData.maxHp += 20;
+                user.gameData.hp += 20;
+                logs.push(`✨ 보스 토벌 기념으로 최대 체력이 20 상승했습니다! (+20 Max HP)`);
+            } else {
+                logs.push(`🎉 승리!`);
+            }
+
             user.gameData.gold = (user.gameData.gold || 0) + monster.rewardGold;
             await this.monsterRepo.remove(monster);
         } else {

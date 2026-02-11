@@ -52,6 +52,8 @@ export class GameService {
             equippedWeapon: null,
             nextMonsterIntent: null,
             canSeeIntent: false,
+            maxHpBonusCount: 0,
+            potionPurchaseCount: 0,
         };
 
         const user = await this.userService.findOrCreateUser(userId, initialData);
@@ -176,7 +178,14 @@ export class GameService {
             };
         } else if (selection === 'TREASURE') {
             user.gameData.state = GameState.TREASURE;
-            const rewardGold = 10;
+
+            // 💰 골드 보상 동적 스케일링 (30 ~ 150)
+            // 턴(1~15)에 따라 처음에는 30-40, 마지막에는 최대 150까지 증가
+            const turn = user.gameData.currentTurn || 1;
+            const minGold = Math.min(120, 30 + (turn - 1) * 6);
+            const maxGold = Math.min(150, 40 + (turn - 1) * 8);
+            const rewardGold = Math.floor(Math.random() * (maxGold - minGold + 1)) + minGold;
+
             user.gameData.gold = (user.gameData.gold || 0) + rewardGold;
             await this.userService.save(user);
             return {
