@@ -52,6 +52,7 @@ export default function LobbyPage() {
 
   const onContinue = () => {
     if (gameData && gameData.hp > 0) {
+      useGameStore.getState().pushLog(["📜 이전에 멈췄던 곳에서 여정을 이어간다."]);
       navigate("/turn");
     } else {
       alert("이어할 데이터가 없습니다.");

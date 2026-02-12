@@ -1,11 +1,11 @@
-// src/pages/ShopPage.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { SHOP_ITEMS, useGameStore } from "../stores/game.store";
+import { useGameStore } from "../stores/game.store";
 import type { ShopItemId } from "../shared/api/types";
+import GameFrame from "../components/GameFrame";
 
-type ShopItem = (typeof SHOP_ITEMS)[number];
-type CartEntry = { id: ShopItemId; qty: number };
+// 타입 재정의 (스토어에서 가져옴)
+import type { ShopItem } from "../stores/game.store";
 
 function formatGold(n: number) {
   return `${n}G`;
@@ -17,483 +17,240 @@ export default function ShopPage() {
   const gameData = useGameStore((s) => s.gameData);
   const userId = useGameStore((s) => s.userId);
   const buyItem = useGameStore((s) => s.buyItem);
-  const nextTurn = useGameStore((s) => s.nextTurn);
+  const shopItems = useGameStore((s) => s.shopItems);
+  const isMetadataLoading = useGameStore((s) => s.isMetadataLoading);
 
   const stage = gameData?.currentTurn ?? 1;
   const hp = gameData?.hp ?? 0;
+  const maxHp = gameData?.maxHp ?? 100;
   const gold = gameData?.gold ?? 0;
   const potions = gameData?.potions ?? 0;
   const ownedWeapons = gameData?.inventory ?? [];
 
-  const [cart, setCart] = useState<CartEntry[]>([]);
+  const [cart, setCart] = useState<{ id: ShopItemId; qty: number }[]>([]);
   const [notice, setNotice] = useState<string>("");
+  const [hoverId, setHoverId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!gameData || !userId) navigate('/');
   }, [gameData, userId, navigate]);
 
+  // 장바구니 총액 계산
   const cartTotal = useMemo(() => {
-    const map = new Map<ShopItemId, number>();
-    for (const c of cart) map.set(c.id, (map.get(c.id) ?? 0) + c.qty);
+    return cart.reduce((total, entry) => {
+      const item = shopItems.find((it) => it.id === entry.id);
+      if (!item) return total;
 
-    let total = 0;
-    for (const it of SHOP_ITEMS) {
-      const qty = map.get(it.id) ?? 0;
-      total += it.cost * qty;
-    }
-    return total;
-  }, [cart]);
+      // 🧪 포션은 10G 고정, 무기는 정적 가격 사용
+      const unitPrice = item.id === "POTION" ? 10 : item.cost;
+      return total + unitPrice * entry.qty;
+    }, 0);
+  }, [cart, shopItems]);
 
   const cartCount = useMemo(() => cart.reduce((a, b) => a + b.qty, 0), [cart]);
 
   const isWeapon = (item: ShopItem) => item.id !== "POTION";
-  const isOwnedWeapon = (item: ShopItem) => {
-    if (!isWeapon(item)) return false;
-    return ownedWeapons.includes(item.weaponId!);
-  };
+  const isOwnedWeapon = (item: ShopItem) => isWeapon(item) && ownedWeapons.includes(item.weaponId!);
 
   const addToCart = (item: ShopItem) => {
     setNotice("");
     if (isWeapon(item)) {
-      const alreadyOwned = isOwnedWeapon(item);
-      const alreadyInCart = cart.some((c) => c.id === item.id);
-      if (alreadyOwned || alreadyInCart) return;
-      setCart((prev) => [...prev, { id: item.id, qty: 1 }]);
-      return;
+      if (isOwnedWeapon(item)) {
+        setNotice("이미 보유 중인 무기입니다.");
+        return;
+      }
+      if (cart.some((c) => c.id === item.id)) {
+        setNotice("무기 종류는 하나만 선택할 수 있습니다.");
+        return;
+      }
     }
     setCart((prev) => {
-      const idx = prev.findIndex((c) => c.id === item.id);
-      if (idx === -1) return [...prev, { id: item.id, qty: 1 }];
-      const next = [...prev];
-      next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
-      return next;
+      const found = prev.find((c) => c.id === item.id);
+      if (found) return prev.map((c) => (c.id === item.id ? { ...c, qty: c.qty + 1 } : c));
+      return [...prev, { id: item.id, qty: 1 }];
     });
   };
 
-  const clearCart = () => {
-    setCart([]);
-    setNotice("");
+  const removeFromCart = (id: ShopItemId) => {
+    setCart((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const onBack = () => {
-    navigate("/turn");
-  };
-
-  const onConfirm = async () => {
-    setNotice("");
-    if (!userId) return;
-
-    if (cartCount === 0) {
-      setNotice("담긴 아이템이 없다.");
-      return;
-    }
-    if (gold < cartTotal) {
-      setNotice("금화가 부족하다.");
+  const onCheckout = async () => {
+    if (cart.length === 0) return;
+    if (cartTotal > gold) {
+      setNotice("금화가 부족합니다!");
       return;
     }
 
     try {
-      // Sequentially buy items (Server doesn't have bulk buy yet)
-      for (const c of cart) {
-        for (let i = 0; i < c.qty; i++) {
-          // ItemId for API: POTION or weaponId
-          // Server `buyItem` expects `itemId`.
-          // WEAPONS logic: item.id matches server itemId?
-          // SHOP_ITEMS in `game.store.ts`: id is POTION or WEAPON key.
-          // Server `items.data.ts` expects 'POTION' or 'SWORD', etc.
-          // It matches.
-          await buyItem(userId, c.id);
+      for (const entry of cart) {
+        for (let i = 0; i < entry.qty; i++) {
+          await buyItem(userId!, entry.id);
         }
       }
-
-      // After success, advance turn?
-      // Client logic "Stage +1".
-      await nextTurn(userId);
-
-      clearCart();
-      navigate("/turn");
-
-    } catch (e: any) {
-      setNotice(e.message || "구매 실패");
+      setCart([]);
+      setNotice("구매를 완료했습니다!");
+    } catch (e) {
+      setNotice("구매 도중 오류가 발생했습니다.");
     }
   };
 
-  if (!gameData) return <div>Loading...</div>;
+  const onLeave = async () => {
+    await useGameStore.getState().leaveShop(userId!);
+    navigate("/turn");
+  };
+
+  if (isMetadataLoading) {
+    return (
+      <GameFrame bg="/lobby.png">
+        <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <div style={{ color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: 1 }}>상점 데이터를 불러오는 중...</div>
+        </div>
+      </GameFrame>
+    );
+  }
 
   return (
-    <div className="shopRoot">
-      <button className="topRightBtn" onClick={onBack}>
-        돌아가기
-      </button>
-
-      <div className="panel">
-        <div className="left">
-          <div className="leftHeader">
-            <img className="leftIcon" src="/gadgets/인벤토리.png" alt="shop" />
-            <div className="leftTitleWrap">
-              <div className="leftTitle">상점</div>
-              <div className="leftSub">구매 확정 시 STAGE +1</div>
-            </div>
+    <GameFrame bg="/lobby.png">
+      <div style={styles.container}>
+        {/* 상단 스탯 바 */}
+        <div style={styles.topStats}>
+          <div style={styles.statGroup}>
+            <div style={styles.statItem}>❤️ <span style={{ color: '#ff5f5f' }}>{hp}</span> / {maxHp}</div>
+            <div style={styles.statItem}>💰 <span style={{ color: '#ffd43b' }}>{gold}</span></div>
+            <div style={styles.statItem}>🧪 <span style={{ color: '#4ade80' }}>{potions}</span></div>
           </div>
-
-          <div className="stats">
-            <div className="row">
-              <span>HP</span>
-              <span>
-                {hp} / 100
-              </span>
-            </div>
-            <div className="row">
-              <span>Gold</span>
-              <span>{formatGold(gold)}</span>
-            </div>
-            <div className="row">
-              <span>보유 포션</span>
-              <span>{potions}개</span>
-            </div>
-            <div className="row">
-              <span>보유 무기</span>
-              <span>{ownedWeapons.length}개</span>
-            </div>
-            <div className="row">
-              <span>STAGE</span>
-              <span>{stage}</span>
-            </div>
-          </div>
-
-          <div className="cartBox">
-            <div className="cartTitle">장바구니</div>
-            <div className="cartLine">
-              <span>총액</span>
-              <span>{formatGold(cartTotal)}</span>
-            </div>
-            <div className="cartHint">
-              {cartCount === 0 ? "담긴 아이템이 없다." : `${cartCount}개 담김`}
-            </div>
-
-            {notice ? <div className="notice">{notice}</div> : null}
-
-            <div className="cartActions">
-              <button className="btnPrimary" onClick={onConfirm}>
-                구매 확정
-              </button>
-              <button className="btnGhost" onClick={clearCart}>
-                비우기
-              </button>
-            </div>
-          </div>
+          <div style={styles.stageTitle}>STAGE {stage} : 신비한 상점</div>
+          <button style={styles.leaveBtn} onClick={onLeave}>나가기</button>
         </div>
 
-        <div className="right scrollArea">
-          <div className="grid">
-            {SHOP_ITEMS.map((item) => {
-              const owned = isOwnedWeapon(item);
-              const inCart = cart.some((c) => c.id === item.id);
-              const disabled = owned || (isWeapon(item) && inCart);
+        <div style={styles.content}>
+          <div style={styles.leftPane}>
+            <div style={styles.grid}>
+              {shopItems.map((item) => {
+                const owned = isOwnedWeapon(item);
+                const inCart = cart.some((c) => c.id === item.id);
+                const isHover = hoverId === item.id;
 
-              return (
-                <div key={item.id} className="itemCard">
-                  <div className="itemTop">
-                    <div className="itemName">{item.title}</div>
-                  </div>
-
-                  <div className="itemImgWrap">
-                    <img className="itemImg" src={item.img} alt={item.title} />
-                  </div>
-
-                  <div className="meta">
-                    <div className="metaRow">
-                      <span className="metaKey">가격</span>
-                      <span className="metaVal">{formatGold(item.cost)}</span>
-                    </div>
-                    <div className="metaRow">
-                      <span className="metaKey">효과</span>
-                      <span className="metaVal">{item.effectText}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    className={`addBtn ${disabled ? "disabled" : ""}`}
-                    onClick={() => addToCart(item)}
-                    disabled={disabled}
-                    aria-disabled={disabled}
-                    title={owned ? "이미 보유" : inCart ? "이미 담김" : "담기"}
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      ...styles.card,
+                      ...(owned ? styles.cardOwned : {}),
+                      ...(isHover ? styles.cardHover : {}),
+                    }}
+                    onMouseEnter={() => setHoverId(item.id)}
+                    onMouseLeave={() => setHoverId(null)}
+                    onClick={() => !owned && addToCart(item)}
                   >
-                    {owned ? "이미 보유" : inCart ? "이미 담김" : "담기"}
-                  </button>
+                    <div style={styles.cardIconBox}>
+                      <img src={item.img} alt={item.title} style={styles.cardImg} draggable={false} />
+                    </div>
+                    <div style={styles.cardInfo}>
+                      <div style={styles.cardTitleLine}>
+                        <div style={styles.cardTitle}>{item.title}</div>
+                        {owned && <div style={styles.ownedBadge}>보유</div>}
+                      </div>
+                      <div style={styles.cardEffect}>{item.effectText}</div>
+                      <div style={styles.cardPrice}>{formatGold(item.cost)}</div>
+                    </div>
+                    {!owned && (
+                      <div style={{
+                        ...styles.addIndicator,
+                        opacity: isHover ? 1 : 0,
+                        transform: isHover ? 'translateY(0)' : 'translateY(4px)'
+                      }}>
+                        {inCart ? "장바구니 추가됨" : "클릭하여 담기"}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={styles.rightPane}>
+            <div style={styles.cartBox}>
+              <div style={styles.cartHeader}>장바구니 ({cartCount})</div>
+              <div style={styles.cartList}>
+                {cart.length === 0 ? (
+                  <div style={styles.emptyCart}>선택된 아이템이 없습니다.</div>
+                ) : (
+                  cart.map((c) => {
+                    const item = shopItems.find((it) => it.id === c.id);
+                    return (
+                      <div key={c.id} style={styles.cartItem}>
+                        <div style={{ flex: 1 }}>
+                          <div style={styles.cartItemTitle}>{item?.title} {c.qty > 1 && <span style={{ color: '#888' }}>x{c.qty}</span>}</div>
+                          <div style={styles.cartItemPrice}>{formatGold((item?.cost || 0) * c.qty)}</div>
+                        </div>
+                        <button style={styles.removeBtn} onClick={(e) => { e.stopPropagation(); removeFromCart(c.id); }}>×</button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div style={styles.cartFooter}>
+                <div style={styles.totalRow}>
+                  <span>합계</span>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: cartTotal > gold ? "#ff4d4d" : "#ffd43b" }}>{formatGold(cartTotal)}</span>
                 </div>
-              );
-            })}
+                {notice && <div style={{ ...styles.notice, color: notice.includes("부족") ? "#ff4d4d" : "#4ade80" }}>{notice}</div>}
+                <button
+                  style={{
+                    ...styles.checkoutBtn,
+                    opacity: cart.length === 0 || cartTotal > gold ? 0.5 : 1,
+                    cursor: cart.length === 0 || cartTotal > gold ? 'not-allowed' : 'pointer',
+                  }}
+                  onClick={onCheckout}
+                  disabled={cart.length === 0 || cartTotal > gold}
+                >
+                  구매하기
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .shopRoot{
-          min-height:100vh;
-          width:100%;
-          position:relative;
-          background-image:url("/turn.png");
-          background-size:cover;
-          background-position:center;
-          background-repeat:no-repeat;
-          overflow:hidden;
-          padding:28px 28px 24px;
-        }
-        .shopRoot::before{
-          content:"";
-          position:absolute;
-          inset:0;
-          background:rgba(0,0,0,0.55);
-          pointer-events:none;
-        }
-
-        .topRightBtn{
-          position:absolute;
-          top:28px;
-          right:28px;
-          z-index:5;
-          padding:10px 18px;
-          border-radius:12px;
-          border:1px solid rgba(255,255,255,0.18);
-          background:rgba(0,0,0,0.45);
-          color:#fff;
-          cursor:pointer;
-          backdrop-filter: blur(6px);
-        }
-        .topRightBtn:hover{
-          border-color:rgba(255,255,255,0.32);
-          background:rgba(0,0,0,0.55);
-        }
-
-        .panel{
-          position:relative;
-          z-index:2;
-          width:min(1180px, 100%);
-          margin:0 auto;
-          border-radius:18px;
-          border:1px solid rgba(255,255,255,0.14);
-          background:rgba(0,0,0,0.35);
-          box-shadow:0 20px 60px rgba(0,0,0,0.55);
-          backdrop-filter: blur(10px);
-
-          padding:56px 22px 22px;
-          display:grid;
-          grid-template-columns: 320px 1fr;
-          gap:18px;
-          height: min(78vh, 760px);
-        }
-
-        .left{
-          border-radius:16px;
-          border:1px solid rgba(255,255,255,0.12);
-          background:rgba(0,0,0,0.35);
-          padding:16px;
-          display:flex;
-          flex-direction:column;
-          gap:14px;
-          overflow:hidden;
-        }
-
-        .leftHeader{
-          display:flex;
-          align-items:center;
-          gap:12px;
-        }
-        .leftIcon{
-          width:44px;
-          height:44px;
-          border-radius:12px;
-          border:1px solid rgba(255,255,255,0.12);
-          background:rgba(0,0,0,0.35);
-          padding:6px;
-          object-fit:contain;
-        }
-        .leftTitleWrap{ display:flex; flex-direction:column; gap:2px; }
-        .leftTitle{ color:#fff; font-size:18px; font-weight:800; letter-spacing:0.5px; }
-        .leftSub{ color:rgba(255,255,255,0.70); font-size:12px; }
-
-        .stats{
-          border-radius:14px;
-          border:1px solid rgba(255,255,255,0.10);
-          background:rgba(0,0,0,0.28);
-          padding:12px;
-          display:flex;
-          flex-direction:column;
-          gap:8px;
-        }
-        .row{
-          display:flex;
-          justify-content:space-between;
-          color:rgba(255,255,255,0.86);
-          font-size:13px;
-          padding:6px 0;
-          border-bottom:1px solid rgba(255,255,255,0.06);
-        }
-        .row:last-child{ border-bottom:none; }
-
-        .cartBox{
-          margin-top:auto;
-          border-radius:14px;
-          border:1px solid rgba(255,255,255,0.10);
-          background:rgba(0,0,0,0.28);
-          padding:12px;
-          display:flex;
-          flex-direction:column;
-          gap:10px;
-        }
-        .cartTitle{ color:#fff; font-weight:800; }
-        .cartLine{
-          display:flex;
-          justify-content:space-between;
-          color:rgba(255,255,255,0.86);
-          font-size:13px;
-        }
-        .cartHint{
-          color:rgba(255,255,255,0.65);
-          font-size:12px;
-        }
-        .notice{
-          color:#ffd7d7;
-          font-size:12px;
-          padding:8px 10px;
-          border-radius:10px;
-          border:1px solid rgba(255,80,80,0.22);
-          background:rgba(120,0,0,0.18);
-        }
-
-        .cartActions{
-          display:grid;
-          grid-template-columns: 1fr 1fr;
-          gap:10px;
-          margin-top:4px;
-        }
-        .btnPrimary, .btnGhost{
-          height:44px;
-          border-radius:12px;
-          cursor:pointer;
-          color:#fff;
-          border:1px solid rgba(255,255,255,0.14);
-          background:rgba(0,0,0,0.35);
-        }
-        .btnPrimary{
-          border-color:rgba(255,255,255,0.22);
-          background:rgba(255,255,255,0.06);
-        }
-        .btnPrimary:hover{ background:rgba(255,255,255,0.10); }
-        .btnGhost:hover{ background:rgba(255,255,255,0.07); }
-
-        .right{
-          border-radius:16px;
-          border:1px solid rgba(255,255,255,0.12);
-          background:rgba(0,0,0,0.25);
-          padding:14px;
-        }
-
-        .scrollArea{
-          overflow:auto;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(255,255,255,0.18) rgba(0,0,0,0.20);
-        }
-        .scrollArea::-webkit-scrollbar{ width:10px; }
-        .scrollArea::-webkit-scrollbar-track{
-          background: rgba(0,0,0,0.25);
-          border-radius: 999px;
-        }
-        .scrollArea::-webkit-scrollbar-thumb{
-          background: rgba(255,255,255,0.16);
-          border-radius: 999px;
-          border: 2px solid rgba(0,0,0,0.25);
-        }
-        .scrollArea:hover::-webkit-scrollbar-thumb{
-          background: rgba(255,255,255,0.26);
-        }
-        .scrollArea::-webkit-scrollbar-thumb:active{
-          background: rgba(255,255,255,0.34);
-        }
-
-        .grid{
-          display:grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap:14px;
-        }
-        @media (max-width: 980px){
-          .panel{ grid-template-columns: 1fr; height:auto; }
-          .grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        @media (max-width: 640px){
-          .grid{ grid-template-columns: 1fr; }
-        }
-
-        .itemCard{
-          border-radius:16px;
-          border:1px solid rgba(255,255,255,0.12);
-          background:rgba(0,0,0,0.34);
-          padding:14px;
-          display:flex;
-          flex-direction:column;
-          gap:10px;
-          min-height: 230px;
-        }
-        .itemTop{
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-        }
-        .itemName{
-          color:#fff;
-          font-weight:800;
-          letter-spacing:0.3px;
-        }
-
-        .itemImgWrap{
-          height:84px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-        }
-        .itemImg{
-          max-height:84px;
-          max-width:100%;
-          object-fit:contain;
-          image-rendering: auto;
-          filter: drop-shadow(0 10px 18px rgba(0,0,0,0.65));
-        }
-
-        .meta{
-          margin-top:4px;
-          display:flex;
-          flex-direction:column;
-          gap:6px;
-        }
-        .metaRow{
-          display:flex;
-          justify-content:space-between;
-          color:rgba(255,255,255,0.84);
-          font-size:13px;
-          border-bottom:1px solid rgba(255,255,255,0.06);
-          padding-bottom:6px;
-        }
-        .metaRow:last-child{ border-bottom:none; padding-bottom:0; }
-        .metaKey{ color:rgba(255,255,255,0.60); }
-        .metaVal{ font-weight:700; }
-
-        .addBtn{
-          margin-top:auto;
-          height:42px;
-          border-radius:12px;
-          border:1px solid rgba(255,255,255,0.14);
-          background:rgba(255,255,255,0.06);
-          color:#fff;
-          cursor:pointer;
-        }
-        .addBtn:hover{ background:rgba(255,255,255,0.10); }
-        .addBtn.disabled{
-          cursor:not-allowed;
-          opacity:0.55;
-          background:rgba(255,255,255,0.03);
-        }
-      `}</style>
-    </div>
+    </GameFrame>
   );
 }
+
+const styles: Record<string, CSSProperties> = {
+  container: { padding: "30px 40px", height: "100%", display: "flex", flexDirection: "column", boxSizing: "border-box", color: "#fff" },
+  topStats: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30, zIndex: 10 },
+  statGroup: { display: "flex", gap: 15, background: "rgba(0,0,0,0.55)", padding: "10px 22px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(12px)" },
+  statItem: { fontSize: 18, fontWeight: 900, letterSpacing: 0.5 },
+  stageTitle: { fontSize: 32, fontWeight: 950, letterSpacing: 1, textShadow: "0 4px 14px rgba(0,0,0,0.7)" },
+  leaveBtn: { padding: "10px 26px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.08)", color: "#fff", fontWeight: 800, cursor: "pointer", transition: "all 0.2s" },
+  content: { flex: 1, display: "flex", gap: 30, minHeight: 0 },
+  leftPane: { flex: 2.5, overflowY: "auto", paddingRight: 10 },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20, paddingBottom: 20 },
+  card: { background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.45) 100%)", borderRadius: 22, padding: 24, border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(20px)", cursor: "pointer", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", position: "relative", display: "flex", flexDirection: "column", gap: 15 },
+  cardHover: { transform: "translateY(-6px)", borderColor: "rgba(255,255,255,0.45)", background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.55) 100%)", boxShadow: "0 22px 50px rgba(0,0,0,0.45)" },
+  cardOwned: { opacity: 0.55, cursor: "default", background: "rgba(0,0,0,0.5)" },
+  cardIconBox: { width: 84, height: 84, background: "rgba(0,0,0,0.4)", borderRadius: 18, display: "flex", justifyContent: "center", alignItems: "center", border: "1px solid rgba(255,255,255,0.12)" },
+  cardImg: { width: 64, height: 64, objectFit: "contain" },
+  cardInfo: { display: "flex", flexDirection: "column", gap: 4 },
+  cardTitleLine: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  cardTitle: { fontSize: 24, fontWeight: 950 },
+  ownedBadge: { fontSize: 11, padding: "3px 10px", background: "rgba(255,255,255,0.25)", borderRadius: 8, fontWeight: 800 },
+  cardEffect: { fontSize: 15, color: "#ffd43b", fontWeight: 750 },
+  cardPrice: { fontSize: 16, opacity: 0.65, fontWeight: 800, marginTop: 4 },
+  addIndicator: { position: "absolute", bottom: 18, right: 24, fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.55)", transition: "all 0.3s ease" },
+  rightPane: { flex: 1 },
+  cartBox: { height: "100%", background: "rgba(0,0,0,0.5)", borderRadius: 26, border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(35px)", display: "flex", flexDirection: "column", padding: 26, boxSizing: "border-box" },
+  cartHeader: { fontSize: 22, fontWeight: 950, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.12)", paddingBottom: 16 },
+  cartList: { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 },
+  emptyCart: { textAlign: "center", marginTop: 120, color: "rgba(255,255,255,0.35)", fontSize: 15, fontWeight: 700 },
+  cartItem: { background: "rgba(255,255,255,0.06)", padding: 18, borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  cartItemTitle: { fontSize: 16, fontWeight: 850 },
+  cartItemPrice: { fontSize: 14, color: "#ffd43b", fontWeight: 750 },
+  removeBtn: { background: "rgba(255,255,255,0.12)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 8, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer", fontSize: 20 },
+  cartFooter: { marginTop: 22, borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 22 },
+  totalRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
+  notice: { fontSize: 14, textAlign: "center", marginBottom: 18, minHeight: 18, fontWeight: 800 },
+  checkoutBtn: { width: "100%", height: 58, borderRadius: 18, border: "none", background: "#ffd43b", color: "#000", fontSize: 20, fontWeight: 950, transition: "all 0.3s ease" },
+};

@@ -89,5 +89,15 @@ export const api = {
   confirmRest: async (userId: number) => {
     const res = await http.post<any>("/game/confirm-rest", { userId });
     return res.data;
+  },
+
+  leaveShop: async (userId: number) => {
+    const res = await http.post<any>("/game/leave-shop", { userId });
+    return res.data;
+  },
+
+  getMetadata: async (userId?: number) => {
+    const res = await http.get<any>("/game/metadata", { params: { userId } });
+    return res.data;
   }
 };

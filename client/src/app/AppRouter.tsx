@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import MainLayout from "./MainLayout";
 import TitlePage from "../pages/TitlePage";
 import LobbyPage from "../pages/LobbyPage";
 import TurnPage from "../pages/TurnPage";
@@ -9,14 +10,20 @@ import BattlePage from "../pages/BattlePage";
 import GuidePage from "../pages/GuidePage";
 
 const router = createBrowserRouter([
-  { path: "/", element: <TitlePage /> },
-  { path: "/lobby", element: <LobbyPage /> },
-  { path: "/turn", element: <TurnPage /> },
-  { path: "/shop", element: <ShopPage /> },
-  { path: "/rest", element: <RestPage /> },
-  { path: "/treasure", element: <TreasurePage /> },
-  { path: "/battle", element: <BattlePage /> },
-  { path: "/guide", element: <GuidePage /> },
+  {
+    path: "/",
+    element: <MainLayout />,
+    children: [
+      { index: true, element: <TitlePage /> },
+      { path: "lobby", element: <LobbyPage /> },
+      { path: "turn", element: <TurnPage /> },
+      { path: "shop", element: <ShopPage /> },
+      { path: "rest", element: <RestPage /> },
+      { path: "treasure", element: <TreasurePage /> },
+      { path: "battle", element: <BattlePage /> },
+      { path: "guide", element: <GuidePage /> },
+    ],
+  },
 ]);
 
 export default function AppRouter() {

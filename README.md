@@ -40,3 +40,4 @@ npm run dev
 - **EADDRINUSE (포트 충돌)**: 이미 3000번이나 5173번 포트가 사용 중인 경우 프로세스를 종료하고 다시 실행하세요.
 - **DB Connection Error**: DB 서비스가 구동 중인지, `game_db`가 생성되어 있는지 확인하세요.
 - **Build Error**: `server` 디렉토리에서 불필요한 테스트 파일(`*.spec.ts`)이 빌드를 방해할 경우 삭제 후 시도하세요. (최신 main 브랜치에서 해결됨)
+

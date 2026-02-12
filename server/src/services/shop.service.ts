@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { GameState } from '../entity/user.entity';
-import { WEAPON_BOOK } from '../data/items.data';
+import { WEAPON_BOOK, SHOP_LIST } from '../data/items.data';
 import { UserService } from './user.service';
 
 @Injectable()
@@ -14,30 +14,20 @@ export class ShopService {
         if (!user) throw new NotFoundException(`User ${userId} not found`);
 
         const heartCount = user.gameData.maxHpBonusCount || 0;
-        const potionCount = user.gameData.potionPurchaseCount || 0;
 
-        return {
-            items: [
-                {
-                    id: 'POTION',
-                    name: '포션',
-                    currentPrice: Math.floor(10 * Math.pow(1.2, potionCount)),
-                    desc: 'HP +20'
-                },
-                {
-                    id: 'HEART',
-                    name: '생명의 정수',
-                    currentPrice: Math.floor(50 * Math.pow(1.5, heartCount)),
-                    desc: '최대 HP +20'
-                },
-                { id: 'NORMAL_SWORD', name: '노말 검', currentPrice: 15, desc: '공격력 +2' },
-                { id: 'SWORD', name: '검', currentPrice: 25, desc: '공격력 +3' },
-                { id: 'RARE_SWORD', name: '레어 검', currentPrice: 45, desc: '공격력 +5' },
-                { id: 'EPIC_SWORD', name: '에픽 검', currentPrice: 80, desc: '공격력 +8' },
-                { id: 'UNIQUE_SWORD', name: '유니크 검', currentPrice: 140, desc: '공격력 +12' },
-                { id: 'LEGENDARY_SWORD', name: '레전더리 검', currentPrice: 220, desc: '공격력 +16' },
-            ]
-        };
+        // SHOP_LIST를 기반으로 동적 가격 계산 (포션 10G 고정, 생명의 정수 1.5배)
+        const items = SHOP_LIST.map(item => {
+            let price = item.price;
+            if (item.id === 'POTION') price = 10;
+            if (item.id === 'HEART') price = Math.floor(50 * Math.pow(1.5, heartCount));
+
+            return {
+                ...item,
+                price
+            };
+        });
+
+        return { items };
     }
 
     async usePotion(userId: number) {
@@ -97,16 +87,9 @@ export class ShopService {
         let isPotion = false;
 
         if (itemId === 'POTION') {
-            // 🧪 포션: 살 때마다 가격이 20%씩 상승 (최소 10G)
-            const count = user.gameData.potionPurchaseCount || 0;
-            itemPrice = Math.floor(10 * Math.pow(1.2, count));
+            itemPrice = 10;
             itemName = '포션';
             isPotion = true;
-        } else if (itemId === 'HEART') {
-            // ❤️ 생명의 정수: 살 때마다 가격이 1.5배씩 상승 (소수점 버림)
-            const count = user.gameData.maxHpBonusCount || 0;
-            itemPrice = Math.floor(50 * Math.pow(1.5, count));
-            itemName = '생명의 정수';
         } else if (WEAPON_BOOK[itemId]) {
             itemPrice = WEAPON_BOOK[itemId].price;
             itemName = WEAPON_BOOK[itemId].name;
@@ -126,10 +109,6 @@ export class ShopService {
         if (isPotion) {
             user.gameData.potions = (user.gameData.potions || 0) + 1;
             user.gameData.potionPurchaseCount = (user.gameData.potionPurchaseCount || 0) + 1;
-        } else if (itemId === 'HEART') {
-            user.gameData.maxHp += 20;
-            user.gameData.hp += 20;
-            user.gameData.maxHpBonusCount = (user.gameData.maxHpBonusCount || 0) + 1;
         } else {
             user.gameData.inventory.push(itemId);
         }
@@ -140,7 +119,9 @@ export class ShopService {
             message: `${itemName} 구매 완료!`,
             gold: user.gameData.gold,
             potions: user.gameData.potions,
-            inventory: user.gameData.inventory
+            inventory: user.gameData.inventory,
+            hp: user.gameData.hp,
+            maxHp: user.gameData.maxHp,
         };
     }
 }

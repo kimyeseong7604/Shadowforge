@@ -58,7 +58,7 @@ export type SubmitRankingResponse = {
 
 // src/api/types.ts (기존 내용 유지 + 아래 없으면 추가)
 
-export type TurnOptionType = "BATTLE" | "SHOP" | "TREASURE" | "REST";
+export type TurnOptionType = "BATTLE" | "SHOP" | "TREASURE" | "REST" | "BOSS_BATTLE" | "FINAL_BATTLE";
 
 export type TurnRoute = "/battle" | "/shop" | "/treasure" | "/rest";
 
@@ -81,6 +81,7 @@ export type WeaponId =
 
 export type ShopItemId =
   | "POTION"
+  | "HEART"
   | "NORMAL_SWORD"
   | "SWORD"
   | "RARE_SWORD"
@@ -134,6 +135,7 @@ export interface GameData {
   potions: number;
   inventory: string[];
   equippedWeapon: string | null;
+  potionPurchaseCount: number;
 }
 
 export interface StartGameResponse {

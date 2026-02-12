@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { UserService } from '../services/user.service';
 import { GameService } from '../services/game.service';
 import { BattleService } from '../services/battle.service';
 import { ShopService } from '../services/shop.service';
+import { WEAPON_BOOK, SHOP_LIST } from '../data/items.data';
 
 @Controller()
 export class AppController {
@@ -73,5 +74,33 @@ export class AppController {
   @Post('buy-item')
   buyItem(@Body() body: { userId: number, itemId: string }) {
     return this.shopService.buyItem(body.userId, body.itemId);
+  }
+
+  @Post('game/leave-shop')
+  leaveShop(@Body() body: { userId: number }) {
+    return this.gameService.leaveShop(body.userId);
+  }
+
+  @Get('game/metadata')
+  async getMetadata(@Query('userId') userId: string) {
+    const uid = userId ? Number(userId) : 1;
+    let shopItems;
+    try {
+      const shopData = await this.shopService.getShopItems(uid);
+      shopItems = shopData.items.map(item => ({
+        ...item,
+        title: item.name,
+        price: item.price,
+        type: item.type || (item.id === 'POTION' ? 'POTION' : item.id === 'HEART' ? 'HEART' : 'WEAPON'),
+        effectText: item.desc || (item as any).effectText
+      }));
+    } catch (e) {
+      shopItems = SHOP_LIST;
+    }
+
+    return {
+      weapons: WEAPON_BOOK,
+      shopItems: shopItems,
+    };
   }
 }

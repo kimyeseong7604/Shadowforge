@@ -44,7 +44,7 @@ export class BattleService {
     async spawnRandomBoss(turn: number) {
         const lords = MONSTER_BOOK.filter(m => m.grade === MonsterGrade.BOSS);
         const lordSpec = lords[Math.floor(Math.random() * lords.length)];
-        const scaling = 1 + (turn * 0.1);
+        const scaling = 1 + (turn * 0.05);
 
         const boss = this.monsterRepo.create({
             specId: lordSpec.id,
@@ -75,74 +75,21 @@ export class BattleService {
         const logs: string[] = [];
         if (user.gameData.luckyCooldown === undefined) user.gameData.luckyCooldown = 0;
 
-        // 기절 체크
+        // 1. 기절 체크 및 처리
         if (user.gameData.stunned) {
-            user.gameData.stunned = false;
-            if (user.gameData.luckyCooldown > 0) user.gameData.luckyCooldown--;
-
-            const monsterAction = monster.nextAction || 'ATTACK';
-            let monsterDmg = monster.attack + Math.floor(Math.random() * 3);
-
-            if (monsterAction === 'ATTACK') {
-                user.gameData.hp -= monsterDmg;
-                logs.push(`😵 기절하여 움직일 수 없습니다! (샌드백 신세... -${monsterDmg} HP)`);
-            } else {
-                logs.push(`😵 기절해 있었지만 다행히 몬스터도 방어했습니다.`);
-            }
-
-            if (user.gameData.hp <= 0) {
-                user.gameData.hp = 0;
-                user.gameData.state = GameState.GAME_OVER;
-                logs.push(`💀 기절 상태에서 공격받아 쓰러졌습니다...`);
-                await this.userService.save(user);
-                return { result: 'LOSE', logs, monsterHp: monster.hp, userHp: 0, monsterAction, luckyCooldown: user.gameData.luckyCooldown };
-            }
-
-            await this.userService.save(user);
-            const nextMonsterIntent = user.gameData.agi >= monster.agi ? monster.nextAction : '?';
-            return {
-                result: 'CONTINUE',
-                logs,
-                monsterHp: monster.hp,
-                userHp: user.gameData.hp,
-                monsterAction,
-                nextMonsterIntent,
-                canSeeIntent: user.gameData.agi >= monster.agi,
-                luckyCooldown: user.gameData.luckyCooldown
-            };
+            return await this.handlePlayerStun(user, monster, logs);
         }
 
         const monsterAction = monster.nextAction || 'ATTACK';
         let monsterDmg = monster.attack + Math.floor(Math.random() * 3);
 
-        let weaponAtk = 0;
-        if (user.gameData.equippedWeapon && WEAPON_BOOK[user.gameData.equippedWeapon]) {
-            weaponAtk = WEAPON_BOOK[user.gameData.equippedWeapon].atk;
-        }
-        let playerBaseDmg = Math.max(1, Math.round(weaponAtk + (user.gameData.str * 0.5)));
+        // 2. 주사위(Lucky Attack) 배율 결정
+        const luckyMultiplier = this.resolveLuckFactor(user, useLucky, logs);
 
-        let luckyMultiplier = 1.0;
-        if (useLucky) {
-            if (user.gameData.luckyCooldown > 0) {
-                logs.push(`⚠️ 럭키 어택 쿨타임입니다! (남은 턴: ${user.gameData.luckyCooldown}) -> 일반 공격으로 진행`);
-            } else {
-                logs.push(`🎲 [이판사판] 주사위를 굴립니다...`);
-                const dice1 = Math.floor(Math.random() * 5) + 1;
-                const dice2 = Math.floor(Math.random() * 5) + 1;
-                const sum = dice1 + dice2;
-
-                if (dice1 === dice2) {
-                    luckyMultiplier = 2.0;
-                    logs.push(`🎰 잭팟! (${dice1}, ${dice2}) -> 배율 2.0배!`);
-                } else {
-                    luckyMultiplier = 0.2 + (sum / 10);
-                    logs.push(`🎲 결과: ${dice1}, ${dice2} (합 ${sum}) -> 배율 ${luckyMultiplier.toFixed(1)}배`);
-                }
-                user.gameData.luckyCooldown = 3;
-            }
-        }
-
+        // 3. 플레이어 데미지 계산 및 행동 처리
         let playerFinalDmg = 0;
+        const playerBaseDmg = Math.max(1, Math.round((WEAPON_BOOK[user.gameData.equippedWeapon!]?.atk || 0) + (user.gameData.str * 0.5)));
+
         if (action === 'DEFENSE') {
             logs.push(`🛡️ [방어] 태세! (피해 70% 감소)`);
             if (monsterAction === 'ATTACK') {
@@ -183,6 +130,77 @@ export class BattleService {
             }
         }
 
+        // 4. 데미지 반영 및 결과 처리
+        return await this.applyBattleOutcome(user, monster, playerFinalDmg, logs);
+    }
+
+    // --- Private Refactored Methods ---
+
+    private async handlePlayerStun(user: any, monster: any, logs: string[]) {
+        user.gameData.stunned = false;
+        if (user.gameData.luckyCooldown > 0) user.gameData.luckyCooldown--;
+
+        const monsterAction = monster.nextAction || 'ATTACK';
+        let monsterDmg = monster.attack + Math.floor(Math.random() * 3);
+
+        if (monsterAction === 'ATTACK') {
+            user.gameData.hp -= monsterDmg;
+            logs.push(`😵 기절하여 움직일 수 없습니다! (샌드백 신세... -${monsterDmg} HP)`);
+        } else {
+            logs.push(`😵 기절해 있었지만 다행히 몬스터도 방어했습니다.`);
+        }
+
+        if (user.gameData.hp <= 0) {
+            user.gameData.hp = 0;
+            user.gameData.state = GameState.GAME_OVER;
+            logs.push(`💀 기절 상태에서 공격받아 쓰러졌습니다...`);
+            await this.userService.save(user);
+            return { result: 'LOSE', logs, monsterHp: monster.hp, userHp: 0, monsterAction, luckyCooldown: user.gameData.luckyCooldown };
+        }
+
+        await this.userService.save(user);
+        const nextMonsterIntent = user.gameData.agi >= monster.agi ? monster.nextAction : '?';
+        return {
+            result: 'CONTINUE',
+            logs,
+            monsterHp: monster.hp,
+            userHp: user.gameData.hp,
+            monsterAction,
+            nextMonsterIntent,
+            canSeeIntent: user.gameData.agi >= monster.agi,
+            luckyCooldown: user.gameData.luckyCooldown
+        };
+    }
+
+    private resolveLuckFactor(user: any, useLucky: boolean, logs: string[]): number {
+        if (!useLucky) return 1.0;
+
+        if (user.gameData.luckyCooldown > 0) {
+            logs.push(`⚠️ 럭키 어택 쿨타임입니다! (남은 턴: ${user.gameData.luckyCooldown}) -> 일반 공격으로 진행`);
+            return 1.0;
+        }
+
+        logs.push(`🎲 [이판사판] 주사위를 굴립니다... (1~6)`);
+        const dice1 = Math.floor(Math.random() * 6) + 1;
+        const dice2 = Math.floor(Math.random() * 6) + 1;
+        const sum = dice1 + dice2;
+
+        user.gameData.luckyCooldown = 3;
+
+        if (dice1 === dice2) {
+            logs.push(`🎰 잭팟! (${dice1}, ${dice2}) -> 배율 3.0배! (초강력)`);
+            return 3.0;
+        } else {
+            // 최소 3(0.8배) ~ 최대 11(1.6배)
+            const multi = 0.5 + (sum / 10);
+            logs.push(`🎲 결과: ${dice1}, ${dice2} (합 ${sum}) -> 배율 ${multi.toFixed(1)}배`);
+            return multi;
+        }
+    }
+
+    private async applyBattleOutcome(user: any, monster: any, playerFinalDmg: number, logs: string[]) {
+        const monsterAction = monster.nextAction || 'ATTACK';
+
         if (playerFinalDmg > 0) {
             monster.hp = Math.max(0, monster.hp - playerFinalDmg);
             logs.push(`💥 몬스터에게 ${playerFinalDmg} 피해!`);
@@ -199,17 +217,14 @@ export class BattleService {
         let result = 'CONTINUE';
         if (monster.hp === 0) {
             result = 'WIN';
-
             if (user.gameData.state === GameState.BOSS_BATTLE) {
                 logs.push(`🏆 군주 ${monster.name} 토벌 완료!`);
-                // 🎁 보스 처치 자동 보상: 최대 체력 +20
                 user.gameData.maxHp += 20;
                 user.gameData.hp += 20;
                 logs.push(`✨ 보스 토벌 기념으로 최대 체력이 20 상승했습니다! (+20 Max HP)`);
             } else {
                 logs.push(`🎉 승리!`);
             }
-
             user.gameData.gold = (user.gameData.gold || 0) + monster.rewardGold;
             await this.monsterRepo.remove(monster);
         } else {
@@ -237,14 +252,17 @@ export class BattleService {
 
         let message = '';
         if (reward === 'STR') {
-            user.gameData.str += 1;
-            message = '힘수치가 1 상승했습니다!';
+            const val = Math.floor(Math.random() * 3) + 1; // 1~3
+            user.gameData.str += val;
+            message = `힘수치가 ${val} 상승했습니다!`;
         } else if (reward === 'AGI') {
-            user.gameData.agi += 1;
-            message = '민첩성이 1 상승했습니다!';
+            const val = Math.floor(Math.random() * 5) + 1; // 1~5
+            user.gameData.agi += val;
+            message = `민첩성이 ${val} 상승했습니다!`;
         } else if (reward === 'POTION') {
-            user.gameData.potions = (user.gameData.potions || 0) + 1;
-            message = `포션을 획득했습니다! (현재 갯수: ${user.gameData.potions})`;
+            const val = Math.floor(Math.random() * 3); // 0~2
+            user.gameData.potions = (user.gameData.potions || 0) + val;
+            message = `포션을 ${val}개 획득했습니다! (현재 갯수: ${user.gameData.potions})`;
         } else {
             throw new BadRequestException('잘못된 보상 선택입니다.');
         }

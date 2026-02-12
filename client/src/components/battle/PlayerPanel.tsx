@@ -5,6 +5,8 @@ interface Props {
   maxHp: number;
   str: number;
   agi: number;
+  potions: number;
+  onUsePotion: () => void;
   weaponIcon: string;
   styles: Record<string, CSSProperties>;
   clamp: (n: number, min: number, max: number) => number;
@@ -13,6 +15,7 @@ interface Props {
 const IMG_PLAYER_BOX = "/battle/Player_box.png";
 const IMG_SWORD_BOX = "/battle/sword_box.png";
 const IMG_POTION_BOX = "/battle/potion_box.png";
+const IMG_POTION = "/gadgets/포션.png";
 
 /**
  * =========================
@@ -45,9 +48,19 @@ const STAT_TOP_PCT = 0.5;
 const STAT_RIGHT_PCT = 0.21;
 
 // (5) 무기 아이콘 크기(슬롯 내부)
-const WEAPON_ICON_PCT = 1;
+const WEAPON_ICON_PCT = 0.7;
 
-export default function PlayerPanel({ hp, maxHp, str, agi, weaponIcon, styles, clamp }: Props) {
+export default function PlayerPanel({
+  hp,
+  maxHp,
+  str,
+  agi,
+  potions,
+  onUsePotion,
+  weaponIcon,
+  styles,
+  clamp,
+}: Props) {
   const hpPct = clamp((hp / maxHp) * 100, 0, 100);
 
   // ✅ BattlePage.tsx의 styles.playerBox.width(=360)를 그대로 따름
@@ -233,7 +246,7 @@ export default function PlayerPanel({ hp, maxHp, str, agi, weaponIcon, styles, c
         <button
           type="button"
           aria-label="무기"
-          onClick={() => {}}
+          onClick={() => { }}
           style={slotBtn}
           onMouseEnter={(e) => hoverOn(e.currentTarget)}
           onMouseLeave={(e) => hoverOff(e.currentTarget)}
@@ -247,12 +260,34 @@ export default function PlayerPanel({ hp, maxHp, str, agi, weaponIcon, styles, c
         <button
           type="button"
           aria-label="포션"
-          onClick={() => {}}
+          onClick={onUsePotion}
           style={slotBtn}
           onMouseEnter={(e) => hoverOn(e.currentTarget)}
           onMouseLeave={(e) => hoverOff(e.currentTarget)}
         >
-          <img src={IMG_POTION_BOX} alt="" draggable={false} style={slotFrame} />
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <img src={IMG_POTION_BOX} alt="" draggable={false} style={slotFrame} />
+            <img src={IMG_POTION} alt="" draggable={false} style={weaponImg} />
+            {/* 포션 개수 표시 */}
+            <div
+              style={{
+                position: "absolute",
+                right: 4,
+                bottom: 4,
+                background: "rgba(0,0,0,0.8)",
+                color: "#ffc107",
+                fontSize: 12,
+                fontWeight: 900,
+                padding: "2px 6px",
+                borderRadius: 6,
+                border: "1px solid rgba(255,193,7,0.3)",
+                pointerEvents: "none",
+                zIndex: 3,
+              }}
+            >
+              {potions}
+            </div>
+          </div>
         </button>
       </div>
 

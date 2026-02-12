@@ -1,61 +1,123 @@
+// src/pages/RestPage.tsx
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import GameFrame from "../components/GameFrame";
 import { useGameStore } from "../stores/game.store";
 
+const BG = "/turn.png";
+
 export default function RestPage() {
   const navigate = useNavigate();
 
-  const hp = useGameStore((s) => s.gameData?.hp ?? 0);
-  const maxHp = useGameStore((s) => s.gameData?.maxHp ?? 100);
-  const restHeal = useGameStore((s) => s.restHeal);
-  const restoreSnapshotIfAny = useGameStore((s) => s.restoreSnapshotIfAny);
-  const clearSnapshot = useGameStore((s) => s.clearSnapshot);
+  const gameData = useGameStore((s) => s.gameData);
+  const userId = useGameStore((s) => s.userId);
+  const confirmRest = useGameStore((s) => s.confirmRest);
 
-  const back = async () => {
-    restoreSnapshotIfAny();
-    navigate("/turn");
+  const [healed, setHealed] = useState(false);
+
+  useEffect(() => {
+    if (!gameData || !userId) navigate("/");
+  }, [gameData, userId, navigate]);
+
+  const onRest = async () => {
+    if (healed || !userId) return;
+    try {
+      await confirmRest(userId);
+      setHealed(true);
+      setTimeout(() => {
+        navigate("/turn");
+      }, 1200);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const doRest = async () => {
-    await restHeal();
-    clearSnapshot();
-    navigate("/turn");
-  };
+  const hp = gameData?.hp ?? 0;
+  const maxHp = gameData?.maxHp ?? 100;
 
   return (
-    <GameFrame bg="/turn.png">
-      <div className="h-full w-full relative p-12">
-        <button
-          onClick={back}
-          className="absolute top-6 right-6 px-5 py-2 rounded-xl border border-white/15 bg-black/45 text-white hover:bg-black/60"
+    <GameFrame>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundImage: `url(${BG})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          position: "relative",
+          borderRadius: 18,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
+
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          돌아가기
-        </button>
+          <div
+            style={{
+              width: "min(600px, 90%)",
+              background: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(12px)",
+              padding: 40,
+              borderRadius: 24,
+              border: "1px solid rgba(255,255,255,0.15)",
+              textAlign: "center",
+              boxShadow: "0 30px 60px rgba(0,0,0,0.5)",
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#aaa", fontWeight: 800, marginBottom: 12 }}>STAGE {gameData?.currentTurn}</div>
+            <div style={{ fontSize: 48, fontWeight: 900, color: "#fff", marginBottom: 8 }}>고즈넉한 휴식</div>
+            <div style={{ color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>모닥불 근처에서 몸을 추스릅니다.</div>
 
-        <div className="text-white text-6xl font-extrabold">휴식</div>
-        <div className="text-white/70 mt-3">모닥불을 피우고 잠시 숨을 고른다.</div>
-
-        <div className="mt-10 rounded-2xl border border-white/15 bg-black/40 p-10 flex items-center gap-10">
-          <div className="w-[420px] flex items-center justify-center">
-            <img src="/gadgets/휴식모닥불.png" alt="rest" className="w-[320px] h-[240px] object-contain" />
-          </div>
-
-          <div className="flex-1">
-            <div className="text-white text-4xl font-extrabold">HP 회복</div>
-            <div className="text-white/70 mt-2">HP +30 (최대 {maxHp})</div>
-
-            <div className="mt-6 text-white/80">
-              현재 HP: <span className="font-bold">{hp}</span> / {maxHp}
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.6)" }}>
+                <span>HP RECOVERY</span>
+                <span>{hp} / {maxHp}</span>
+              </div>
+              <div style={{ width: "100%", height: 12, background: "rgba(255,255,255,0.1)", borderRadius: 6, overflow: "hidden" }}>
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${(hp / maxHp) * 100}%`,
+                    background: "linear-gradient(90deg, #43a047, #66bb6a)",
+                    transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="mt-8">
-              <button
-                onClick={doRest}
-                className="h-12 px-7 rounded-xl border border-white/15 bg-black/45 text-white hover:bg-black/65"
-              >
-                휴식하고 다음 STAGE
-              </button>
-            </div>
+            <button
+              onClick={onRest}
+              disabled={healed}
+              style={{
+                width: "100%",
+                height: 54,
+                borderRadius: 12,
+                border: "none",
+                background: healed ? "rgba(255,255,255,0.1)" : "#fff",
+                color: healed ? "#666" : "#000",
+                fontSize: 16,
+                fontWeight: 800,
+                cursor: healed ? "not-allowed" : "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              {healed ? "회복 완료" : "체력 회복하기"}
+            </button>
+
+            {healed && (
+              <div style={{ marginTop: 20, color: "#66bb6a", fontWeight: 800, fontSize: 14, animation: "fadeIn 0.5s" }}>
+                당신의 몸과 마음이 치유되었습니다.
+              </div>
+            )}
           </div>
         </div>
       </div>

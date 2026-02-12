@@ -96,24 +96,28 @@ export class GameService {
         // 2. 턴 증가 및 상태 결정
         user.gameData.currentTurn += 1;
 
-        // 3. 보스전 체크
+        // 3. 보스전 체크 (진입 전 선택지 제공)
         if (user.gameData.currentTurn % 5 === 0) {
-            user.gameData.state = GameState.BOSS_BATTLE;
-            const boss = await this.battleService.spawnRandomBoss(user.gameData.currentTurn);
+            user.gameData.state = GameState.SELECTING;
+            const isFinal = user.gameData.currentTurn === 15;
+            // 상점 이용 후 보스전으로 가도록 유도
+            user.gameData.options = ['SHOP', isFinal ? 'FINAL_BATTLE' : 'BOSS_BATTLE'];
 
-            const intent = Math.random() < 0.7 ? 'ATTACK' : 'DEFENSE';
-            user.gameData.nextMonsterIntent = intent;
-            user.gameData.canSeeIntent = user.gameData.agi >= boss.agi;
+            // 기존 옵션 초기화 방지 (이미 상점 다녀온 경우 등은 고려 필요하나, 여기선 턴 진입 시점이므로 초기화가 맞음)
+            // 단, leaveShop에서는 options를 그대로 유지하거나 다시 생성해줘야 함. 
+            // 현재 leaveShop 구현: user.gameData.options를 반환. 
+            // 따라서 턴 진입 시에만 옵션을 설정해주면 됨.
+
+            user.gameData.nextMonsterIntent = null;
+            user.gameData.canSeeIntent = false;
 
             await this.userService.save(user);
             return {
-                message: user.gameData.currentTurn === 15 ? '⚠️ 최종 보스 등장!' : '⚠️ 중간 보스 등장!',
+                message: isFinal ? '최종 결전이 다가왔습니다. 정비하시겠습니까?' : '강력한 기운이 느껴집니다. 정비하시겠습니까?',
                 turn: user.gameData.currentTurn,
-                monster: boss,
-                monsterIntent: intent,
-                canSeeIntent: user.gameData.canSeeIntent,
-                state: GameState.BOSS_BATTLE,
-                isBossBattle: true,
+                options: user.gameData.options,
+                state: GameState.SELECTING,
+                isBossBattle: false, // 아직 전투 아님
                 hp: user.gameData.hp,
                 maxHp: user.gameData.maxHp,
                 gold: user.gameData.gold,
@@ -189,8 +193,33 @@ export class GameService {
             user.gameData.gold = (user.gameData.gold || 0) + rewardGold;
             await this.userService.save(user);
             return {
-                message: '보물 발견!', description: `${rewardGold}G 획득`,
-                gold: user.gameData.gold, state: 'TREASURE'
+                message: '보물 발견!',
+                description: `${rewardGold}G 획득`,
+                rewardGold,
+                gold: user.gameData.gold,
+                state: 'TREASURE'
+            };
+        } else if (selection === 'BOSS_BATTLE' || selection === 'FINAL_BATTLE') {
+            user.gameData.state = GameState.BOSS_BATTLE;
+            const boss = await this.battleService.spawnRandomBoss(user.gameData.currentTurn);
+
+            const intent = Math.random() < 0.7 ? 'ATTACK' : 'DEFENSE';
+            user.gameData.nextMonsterIntent = intent;
+            user.gameData.canSeeIntent = user.gameData.agi >= boss.agi;
+
+            await this.userService.save(user);
+            return {
+                message: selection === 'FINAL_BATTLE' ? '⚠️ 최종 보스 등장!' : '⚠️ 중간 보스 등장!',
+                monster: boss,
+                monsterIntent: intent,
+                canSeeIntent: user.gameData.canSeeIntent,
+                state: GameState.BOSS_BATTLE, // 클라이언트 인식용
+                isBossBattle: true,
+                hp: user.gameData.hp,
+                maxHp: user.gameData.maxHp,
+                gold: user.gameData.gold,
+                potions: user.gameData.potions,
+                luckyCooldown: user.gameData.luckyCooldown || 0
             };
         }
     }
@@ -204,5 +233,28 @@ export class GameService {
         await this.userService.save(user);
 
         return this.nextTurn(userId);
+    }
+
+    async leaveShop(userId: number) {
+        const user = await this.userService.findOne(userId);
+        if (!user) throw new NotFoundException(`User ${userId} not found`);
+
+        if (user.gameData.state !== GameState.SHOP) {
+            throw new BadRequestException('상점 상태가 아닙니다.');
+        }
+
+        user.gameData.state = GameState.SELECTING;
+        await this.userService.save(user);
+
+        return {
+            message: '상점에서 나왔습니다.',
+            turn: user.gameData.currentTurn,
+            options: user.gameData.options,
+            state: GameState.SELECTING,
+            hp: user.gameData.hp,
+            maxHp: user.gameData.maxHp,
+            gold: user.gameData.gold,
+            potions: user.gameData.potions
+        };
     }
 }

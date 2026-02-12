@@ -8,31 +8,20 @@ const BG = "/turn.png";
 const CHEST_2 = "/gadgets/보물상자2.png";
 const CHEST_3 = "/gadgets/보물상자3.png";
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-function randomGold(min = 40, max = 60) {
-  // 버튼 클릭 시점에만 호출될 거라 purity 에러 안 남
-  return Math.floor(min + Math.random() * (max - min + 1));
-}
-
 export default function TreasurePage() {
   const navigate = useNavigate();
 
-  const completeSpecialStage = useGameStore((s) => s.completeSpecialStage);
-  const addGold = useGameStore((s) => s.addGold);
+  const nextTurn = useGameStore((s) => s.nextTurn);
+  const userId = useGameStore((s) => s.userId);
+  const rewardGold = useGameStore((s) => s.rewardGold);
 
   const [claimed, setClaimed] = useState(false);
   const [chestImg, setChestImg] = useState<string>(CHEST_2);
-
-  // 안내 문구(토스트 대신 화면 내 문구)
   const [toast, setToast] = useState<string>("");
   const [toastVisible, setToastVisible] = useState(false);
 
-  // 안내 문구 타이머 관리(중복 방지)
-  const toastDurationMs = 2000; // ✅ 너무 빨리 사라진다 했으니 넉넉히
-  const goNextDelayMs = 1400;   // ✅ 화면 전환도 너무 빠르면 답답해서 살짝 여유
+  const toastDurationMs = 2000;
+  const goNextDelayMs = 1400;
 
   useEffect(() => {
     if (!toastVisible) return;
@@ -42,23 +31,16 @@ export default function TreasurePage() {
 
   const onClaim = () => {
     if (claimed) return;
+    if (rewardGold === null || !userId) return;
 
     setClaimed(true);
-
-    // ✅ 1) 상자 3으로 변경
     setChestImg(CHEST_3);
 
-    // ✅ 2) 골드 지급 (랜덤은 여기서만!)
-    const goldToGain = clamp(randomGold(40, 60), 40, 60);
-    addGold(goldToGain);
-
-    // ✅ 3) 안내 문구
-    setToast(`+${goldToGain}G 를 획득했다!`);
+    setToast(`+${rewardGold}G 를 획득했다!`);
     setToastVisible(true);
 
-    // ✅ 4) 다음 STAGE 처리 후 Turn으로 이동
-    window.setTimeout(() => {
-      completeSpecialStage("TREASURE");
+    window.setTimeout(async () => {
+      await nextTurn(userId);
       navigate("/turn");
     }, goNextDelayMs);
   };

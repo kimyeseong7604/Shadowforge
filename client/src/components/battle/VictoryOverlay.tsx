@@ -13,13 +13,13 @@ export default function VictoryOverlay({ onPickReward, styles }: Props) {
                 <div style={styles.rewardHead}>보상을 선택하세요</div>
                 <div style={styles.rewardBtns}>
                     <button style={styles.rewardBtn} onClick={() => onPickReward("STR")}>
-                        <span style={styles.rewardIcon}>💪</span> 힘 +1
+                        <span style={styles.rewardIcon}>💪</span> 힘 +1 ~ 3
                     </button>
                     <button style={styles.rewardBtn} onClick={() => onPickReward("AGI")}>
-                        <span style={styles.rewardIcon}>💨</span> 민첩 +1
+                        <span style={styles.rewardIcon}>💨</span> 민첩 +1 ~ 5
                     </button>
                     <button style={styles.rewardBtn} onClick={() => onPickReward("POTION")}>
-                        <span style={styles.rewardIcon}>🧪</span> 포션 +1
+                        <span style={styles.rewardIcon}>🧪</span> 포션 0 ~ 2
                     </button>
                 </div>
             </div>

@@ -1,7 +1,7 @@
 // src/pages/TurnPage.tsx
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGameStore, WEAPONS } from "../stores/game.store";
+import { useGameStore } from "../stores/game.store";
 import type { TurnOption, TurnOptionType } from "../shared/api/types";
 import StageIndicators from "../components/StageIndicators";
 
@@ -11,14 +11,22 @@ const OPTION_DETAILS: Record<string, Omit<TurnOption, 'type' | 'route'>> = {
   SHOP: { title: "상점", desc: "장비를 구매하거나 정비합니다.", tag: "상점" },
   TREASURE: { title: "보물", desc: "운이 좋다면 보상을 얻습니다.", tag: "보물" },
   REST: { title: "휴식", desc: "체력을 회복합니다.", tag: "회복" },
+  BOSS_BATTLE: { title: "보스전", desc: "강력한 적과의 전투입니다.", tag: "보스" },
+  FINAL_BATTLE: { title: "최종 결전", desc: "운명을 건 마지막 전투입니다.", tag: "최종장" },
 };
 
 function mapOptions(serverOptions: string[] = []): TurnOption[] {
   return serverOptions.map((opt) => {
     const details = OPTION_DETAILS[opt] || { title: opt, desc: "알 수 없는 행동", tag: "?" };
+    let route: any = '/turn';
+    if (opt === 'BATTLE' || opt === 'BOSS_BATTLE' || opt === 'FINAL_BATTLE') route = '/battle';
+    else if (opt === 'SHOP') route = '/shop';
+    else if (opt === 'TREASURE') route = '/treasure';
+    else if (opt === 'REST') route = '/rest';
+
     return {
       type: opt as TurnOptionType,
-      route: opt === 'BATTLE' ? '/battle' : opt === 'SHOP' ? '/shop' : opt === 'TREASURE' ? '/treasure' : '/rest',
+      route,
       ...details
     } as TurnOption;
   });
@@ -30,6 +38,7 @@ export default function TurnPage() {
   const gameData = useGameStore((s) => s.gameData);
   const userId = useGameStore((s) => s.userId);
   const selectOption = useGameStore((s) => s.selectOption);
+  const weapons = useGameStore((s) => s.weapons); // 동적 무기 데이터
 
   // Mapped Data
   const stage = gameData?.currentTurn ?? 1;
@@ -56,9 +65,14 @@ export default function TurnPage() {
     }
   }, [gameData, userId, navigate]);
 
+  const fetchMetadata = useGameStore((s) => s.fetchMetadata);
+
   const onPick = async (opt: TurnOption) => {
     if (!userId) return;
     try {
+      if (opt.type === 'SHOP') {
+        await fetchMetadata(userId);
+      }
       await selectOption(userId, opt.type);
       navigate(opt.route || "/turn");
     } catch (e) {
@@ -73,6 +87,8 @@ export default function TurnPage() {
       SHOP: "/gadgets/포션.png",
       TREASURE: "/gadgets/보물상자1.png",
       REST: "/gadgets/휴식모닥불.png",
+      BOSS_BATTLE: "/gadgets/해골.png", // 또는 다른 강조 아이콘
+      FINAL_BATTLE: "/gadgets/해골.png",
     } as const;
   }, []);
 
@@ -82,6 +98,8 @@ export default function TurnPage() {
       SHOP: "rgba(255,255,255,0.06)",
       TREASURE: "rgba(255,255,255,0.06)",
       REST: "rgba(255,255,255,0.06)",
+      BOSS_BATTLE: "rgba(255, 50, 50, 0.25)", // 붉은색 강조
+      FINAL_BATTLE: "rgba(180, 0, 0, 0.4)", // 더 진한 붉은색
     } as const;
   }, []);
 
@@ -188,7 +206,7 @@ export default function TurnPage() {
                   ) : (
                     <div style={styles.invGrid}>
                       {ownedWeapons.map((wid) => {
-                        const w = WEAPONS[wid];
+                        const w = weapons[wid];
                         if (!w) return null;
                         const isEquipped = equippedWeaponId === wid;
                         return (

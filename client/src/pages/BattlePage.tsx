@@ -1,14 +1,13 @@
 // BattlePage.tsx
 import { useEffect, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGameStore, WEAPONS } from "../stores/game.store";
+import { useGameStore } from "../stores/game.store";
 import type { Monster } from "../shared/api/types";
 
 // ✨ Sub-components
 import BattleHUD from "../components/battle/BattleHUD";
 import BattleStage from "../components/battle/BattleStage";
 import BattleControls from "../components/battle/BattleControls";
-import BattleLog from "../components/battle/BattleLog";
 import PlayerPanel from "../components/battle/PlayerPanel";
 import VictoryOverlay from "../components/battle/VictoryOverlay";
 
@@ -39,19 +38,19 @@ export default function BattlePage() {
   const claimReward = useGameStore((s) => s.claimReward);
   const nextTurn = useGameStore((s) => s.nextTurn);
   const isLoading = useGameStore((s) => s.isLoading);
+  const weapons = useGameStore((s) => s.weapons); // 동적 무기 데이터
 
   const stage = gameData?.currentTurn ?? 1;
   const hp = gameData?.hp ?? 0;
   const maxHp = gameData?.maxHp ?? 100;
   const str = gameData?.str ?? 0;
   const agi = gameData?.agi ?? 0;
+  const potions = gameData?.potions ?? 0;
   const equippedWeaponId = gameData?.equippedWeapon;
   const luckyCooldown = gameData?.luckyCooldown ?? 0;
   const stunned = gameData?.stunned ?? false;
 
   const monster = useGameStore((s) => s.currentMonster);
-
-  const [logs, setLogs] = useState<string[]>([]);
   const [shakePlayer, setShakePlayer] = useState(false);
   const [shakeEnemy, setShakeEnemy] = useState(false);
   const [luckyChecked, setLuckyChecked] = useState(false);
@@ -66,10 +65,6 @@ export default function BattlePage() {
 
   const storeNextIntent = useGameStore((s) => s.nextMonsterIntent);
   const storeCanSeeIntent = useGameStore((s) => s.canSeeIntent);
-
-  const pushLog = (lines: string[]) => {
-    setLogs((prev) => [...prev.slice(-50), ...lines]);
-  };
 
   useEffect(() => {
     if (!gameData || !userId) {
@@ -106,8 +101,6 @@ export default function BattlePage() {
         luckyChecked && action !== "DEFENSE"
       );
 
-      pushLog(res.logs);
-
       if (res.result === "WIN") setRewardOpen(true);
 
       if (action === "ATTACK" || action === "STRONG_ATTACK") triggerShakeEnemy();
@@ -119,7 +112,6 @@ export default function BattlePage() {
       if (luckyChecked) setLuckyChecked(false);
     } catch (e) {
       console.error(e);
-      pushLog(["❌ 통신 오류 발생"]);
     }
   };
 
@@ -140,6 +132,15 @@ export default function BattlePage() {
     }
   };
 
+  const onUsePotion = async () => {
+    if (!userId || !canAct || potions <= 0) return;
+    try {
+      await useGameStore.getState().usePotion(userId);
+    } catch (e: any) {
+      console.error(e);
+    }
+  };
+
   const onEscape = async () => {
     if (!userId) return;
     try {
@@ -151,7 +152,7 @@ export default function BattlePage() {
     }
   };
 
-  const weaponIcon = WEAPONS[equippedWeaponId as string]?.img ?? "/gadgets/검.png";
+  const weaponIcon = weapons[equippedWeaponId as string]?.img ?? "/gadgets/검.png";
   const isBossBattle = gameData?.state === "BOSS_BATTLE";
   const bgImg = isBossBattle ? `${BATTLE_DIR}/Bossbg.png` : `${BATTLE_DIR}/monsterbg.png`;
   const playerImg = isBossBattle ? `${BATTLE_DIR}/boss vs player.png` : `${BATTLE_DIR}/vs player.png`;
@@ -196,6 +197,8 @@ export default function BattlePage() {
               maxHp={maxHp}
               str={str}
               agi={agi}
+              potions={potions}
+              onUsePotion={onUsePotion}
               weaponIcon={weaponIcon}
               styles={styles}
               clamp={clamp}
@@ -225,8 +228,6 @@ export default function BattlePage() {
 
           {rewardOpen && <VictoryOverlay onPickReward={onPickReward} styles={styles} />}
         </div>
-
-        <BattleLog logs={logs} styles={styles} />
       </div>
     </div>
   );
@@ -429,7 +430,7 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: "none",
   },
 
-  
+
   playerBox: {
     width: 310,
     padding: 0,
@@ -535,28 +536,6 @@ const styles: Record<string, CSSProperties> = {
   luckyCheck: { width: 18, height: 18 },
   luckyText: { fontSize: 13, fontWeight: 700, letterSpacing: 0.5 },
 
-  logPanel: {
-    width: 320,
-    height: 640,
-    background: "rgba(10,10,10,0.85)",
-    backdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 24,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    boxShadow: "0 20px 80px rgba(0,0,0,0.8)",
-  },
-  logHeader: {
-    padding: "20px",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    fontWeight: 900,
-    fontSize: 14,
-    letterSpacing: 1.5,
-    color: "rgba(255,255,255,0.4)",
-    display: "flex",
-    alignItems: "center",
-  },
 
   /**
    * =========================
@@ -646,17 +625,4 @@ const styles: Record<string, CSSProperties> = {
   rewardIcon: { fontSize: 18 },
 
   // BattleLog.tsx에서 흔히 쓰는 스크롤 바디
-  logBody: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "16px 18px 18px 18px",
-    color: "#fff",
-  },
-  logLine: {
-    fontSize: 13,
-    lineHeight: 1.55,
-    color: "rgba(255,255,255,0.9)",
-    marginBottom: 8,
-    wordBreak: "break-word",
-  },
 };
