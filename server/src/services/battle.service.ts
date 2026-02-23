@@ -67,6 +67,7 @@ export class BattleService {
         const monster = await this.monsterRepo.findOne({ where: { id: monsterId } });
 
         if (!user || !monster) throw new NotFoundException('대상 찾을 수 없음');
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (user.gameData.state === GameState.GAME_OVER) {
             return { result: 'LOSE', logs: ['이미 사망했습니다.'], userHp: 0, monsterHp: monster.hp };
@@ -249,6 +250,7 @@ export class BattleService {
     async claimVictoryReward(userId: number, reward: 'STR' | 'AGI' | 'POTION') {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         let message = '';
         if (reward === 'STR') {
@@ -274,6 +276,7 @@ export class BattleService {
     async escape(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (user.gameData.state === GameState.BATTLE || user.gameData.state === GameState.BOSS_BATTLE) {
             user.gameData.state = GameState.SELECTING;

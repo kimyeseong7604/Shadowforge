@@ -1,8 +1,13 @@
 // src/pages/LobbyPage.tsx
-import { useEffect, useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../stores/game.store";
+import { useAuthStore } from "../stores/auth.store";
 import GameFrame from "../components/GameFrame";
+import AlertModal from "../components/AlertModal";
+
+
+
 
 const BG = "/lobby.png";
 const BTN_NEW = "/gadgets/NEW GAME.png";
@@ -13,55 +18,86 @@ type BtnKey = "NEW" | "CONTINUE" | "GUIDE" | null;
 
 export default function LobbyPage() {
   const navigate = useNavigate();
-  // We need userId to start game. 
-  // Ideally, AuthStore provides it. 
-  // But GameStore has `userId` state. 
-  // Let's assume we use a fixed ID for now if Auth is not fully set up, 
-  // OR we rely on `gameStore.initialize` calling `api.me()` which usually returns user info.
-  // Wait, `game.store` doesn't have `me` call in `initialize` in my previous edit?
-  // I need to be careful.
-  // Let's assume `userId` is 1 for dev if missing.
-
   const startGame = useGameStore((s) => s.startGame);
-  const setUserId = useGameStore((s) => s.setUserId);
   const gameData = useGameStore((s) => s.gameData);
+  const { userId } = useAuthStore();
 
   // Local UI
   const [hovered, setHovered] = useState<BtnKey>(null);
   const [pressed, setPressed] = useState<BtnKey>(null);
 
-  // Initialize: Set UserID (Mock or Real)
-  useEffect(() => {
-    // In a real app, we check AuthStore. 
-    // For this migration, let's hardcode 1 or get from localStorage if available.
-    // Or better, logic:
-    setUserId(1);
-    // And maybe fetch current game data to see if Continue is possible
-    // await api.me() ... but gameStore doesn't expose it easily.
-    // Let's assume "New Game" is the primary path for testing now.
-  }, [setUserId]);
+  // Custom Alert State
+  const [alert, setAlert] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => { },
+  });
+
+  const showAlert = (title: string, message: string, onConfirm: () => void, isConfirm = false) => {
+    setAlert({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setAlert(prev => ({ ...prev, isOpen: false }));
+      },
+      onCancel: isConfirm ? () => setAlert(prev => ({ ...prev, isOpen: false })) : undefined,
+    });
+  };
+
+
 
   const onNew = async () => {
     try {
-      await startGame(1); // userId 1
-      navigate("/turn");
+      if (gameData && gameData.hp > 0) {
+        showAlert("새 게임 시작", "이미 진행 중인 게임이 있습니다. 무시하고 새로 시작하시겠습니까?", async () => {
+          await startGame(userId || 1);
+          navigate("/turn");
+        }, true);
+      } else {
+        await startGame(userId || 1);
+        navigate("/turn");
+      }
     } catch (e) {
-      alert("게임 시작 실패");
+      showAlert("오류", "게임 시작에 실패했습니다.", () => { });
     }
   };
 
   const onContinue = () => {
+    // 게임 데이터가 없거나(null), 체력이 0(게임오버)인 경우 모두 이어하기 불가
     if (gameData && gameData.hp > 0) {
-      useGameStore.getState().pushLog(["📜 이전에 멈췄던 곳에서 여정을 이어간다."]);
+      const stats = [
+        "📜 이전에 멈췄던 곳에서 여정을 이어간다.",
+        `💖 현재 체력: ${gameData.hp}/${gameData.maxHp}`,
+        `💰 보유 금화: ${gameData.gold}`,
+        `⚔️ 힘: ${gameData.str} | 💨 민첩: ${gameData.agi}`,
+        `🧪 포션 개수: ${gameData.potions}개`
+      ];
+      useGameStore.getState().pushLog(stats);
       navigate("/turn");
     } else {
-      alert("이어할 데이터가 없습니다.");
+      showAlert("안내", "이어할 모험 데이터가 없습니다. 새로운 모험을 시작하세요!", () => { });
     }
+  };
+
+  const onLogout = () => {
+    showAlert("로그아웃", "정말로 로그아웃 하시겠습니까?", () => {
+      useAuthStore.getState().logout();
+      navigate("/");
+    }, true);
   };
 
   const onGuide = () => navigate("/guide");
 
-  const getBtnStyle = (key: Exclude<BtnKey, null>): React.CSSProperties => {
+  const getBtnStyle = (key: Exclude<BtnKey, null>): CSSProperties => {
     const isHover = hovered === key;
     const isDown = pressed === key;
 
@@ -82,8 +118,8 @@ export default function LobbyPage() {
 
   return (
     <GameFrame bg={BG}>
-      <button type="button" onClick={() => navigate("/")} style={styles.topRightBtn}>
-        타이틀로
+      <button type="button" onClick={onLogout} style={styles.topRightBtn}>
+        로그아웃
       </button>
 
       <div style={styles.centerWrap}>
@@ -123,11 +159,20 @@ export default function LobbyPage() {
           <img src={BTN_GUIDE} alt="GUIDE" style={styles.img} draggable={false} />
         </button>
       </div>
+
+      <AlertModal
+        isOpen={alert.isOpen}
+        title={alert.title}
+        message={alert.message}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+      />
     </GameFrame>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+
+const styles: Record<string, CSSProperties> = {
   topRightBtn: {
     position: "absolute",
     top: 18,

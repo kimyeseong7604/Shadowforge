@@ -16,11 +16,21 @@ export class User {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Column({ unique: true, nullable: true })
+    googleId: string;
+
+    @Column({ unique: true, nullable: true })
+    email: string;
+
+    @Column({ nullable: true })
+    picture: string;
+
     @Column()
     username: string;
 
+
     // JSON으로 유연하게 스탯 저장
-    @Column({ type: 'json' })
+    @Column({ type: 'json', nullable: true })
     gameData: {
         currentTurn: number;     // 현재 턴 (1, 2, 3...)
         state: GameState;        // 현재 상태 (전투중? 선택중?)
@@ -41,5 +51,5 @@ export class User {
         equippedWeapon: string | null; // 현재 장착 중인 무기 ID (없으면 null)
         maxHpBonusCount: number;    // ✨ 최대 체력 증가 아이템 구매 횟수
         potionPurchaseCount: number; // ✨ 포션 구매 횟수
-    };
+    } | null;
 }

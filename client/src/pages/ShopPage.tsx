@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../stores/game.store";
 import type { ShopItemId } from "../shared/api/types";
@@ -31,9 +31,7 @@ export default function ShopPage() {
   const [notice, setNotice] = useState<string>("");
   const [hoverId, setHoverId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!gameData || !userId) navigate('/');
-  }, [gameData, userId, navigate]);
+
 
   // 장바구니 총액 계산
   const cartTotal = useMemo(() => {
@@ -168,10 +166,10 @@ export default function ShopPage() {
                         {owned && <div style={styles.ownedBadge}>보유</div>}
                       </div>
                       <div style={styles.cardEffect}>{item.effectText}</div>
-                        {isWeapon(item) && typeof item.requiredStr === "number" && ( // <--- 여기 수정
-                          <div style={styles.requiredStr}>필요 STR: {item.requiredStr}</div> // <--- 여기 수정
-                        )}
-                        <div style={styles.cardPrice}>{formatGold(item.cost)}</div>
+                      {isWeapon(item) && typeof item.requiredStr === "number" && ( // <--- 여기 수정
+                        <div style={styles.requiredStr}>필요 STR: {item.requiredStr}</div> // <--- 여기 수정
+                      )}
+                      <div style={styles.cardPrice}>{formatGold(item.cost)}</div>
                     </div>
                     {!owned && (
                       <div style={{

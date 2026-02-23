@@ -13,6 +13,10 @@ export class UserService {
         return await this.userRepo.findOne({ where: { id: userId } });
     }
 
+    async findByGoogleId(googleId: string) {
+        return await this.userRepo.findOne({ where: { googleId } });
+    }
+
     async save(user: User) {
         return await this.userRepo.save(user);
     }
@@ -22,16 +26,28 @@ export class UserService {
         return user || null;
     }
 
-    async findOrCreateUser(userId: number, initialGameData: any) {
+    async createFromGoogle(profile: any) {
+        const user = this.userRepo.create({
+            googleId: profile.googleId,
+            email: profile.email,
+            username: profile.username,
+            picture: profile.picture,
+            gameData: null,
+        });
+        return await this.save(user);
+    }
+
+    async findOrCreateUser(userId: number) {
         let user = await this.findOne(userId);
         if (!user) {
             user = this.userRepo.create({
                 id: userId,
                 username: `Player${userId}`,
-                gameData: initialGameData,
+                gameData: null,
             });
             await this.save(user);
         }
         return user;
     }
 }
+

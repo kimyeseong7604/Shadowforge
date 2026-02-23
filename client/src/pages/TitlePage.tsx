@@ -1,8 +1,20 @@
 // client/src/pages/TitlePage.tsx
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../stores/auth.store";
 
 export default function TitlePage() {
   const navigate = useNavigate();
+  const { accessToken, logout } = useAuthStore();
+
+  const handleAuthAction = () => {
+    if (accessToken) {
+      if (window.confirm("로그아웃 하시겠습니까?")) {
+        logout();
+      }
+    } else {
+      navigate("/login");
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-black flex items-center justify-center p-6">
@@ -47,11 +59,11 @@ export default function TitlePage() {
           />
         </button>
 
-        {/* 로그인 버튼 (별도) */}
+        {/* 로그인/로그아웃 버튼 */}
         <button
           type="button"
-          onClick={() => navigate("/login")} // <--- 여기 수정
-          aria-label="LOGIN"
+          onClick={handleAuthAction}
+          aria-label={accessToken ? "LOGOUT" : "LOGIN"}
           className="
             absolute top-4 right-4
             rounded-xl
@@ -65,8 +77,9 @@ export default function TitlePage() {
             focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-black
           "
         >
-          로그인
+          {accessToken ? "로그아웃" : "로그인"}
         </button>
+
 
         {/* 비네팅: 클릭 방해 X */}
         <div

@@ -22,9 +22,11 @@ export default function TreasurePage() {
 
   const goNextDelayMs = 1400;
 
+
+
   useEffect(() => {
     if (!toastVisible) return;
-    const t = window.setTimeout(() => setToastVisible(false),);
+    const t = window.setTimeout(() => setToastVisible(false), 2000);
     return () => window.clearTimeout(t);
   }, [toastVisible]);
 

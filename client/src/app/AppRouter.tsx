@@ -9,6 +9,7 @@ import TreasurePage from "../pages/TreasurePage";
 import BattlePage from "../pages/BattlePage";
 import GuidePage from "../pages/GuidePage";
 import LoginPage from "../pages/LoginPage";
+import ProtectedRoute from "../components/auth/ProtectedRoute";
 
 const router = createBrowserRouter([
   {
@@ -17,12 +18,17 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <TitlePage /> },
       { path: "login", element: <LoginPage /> },
-      { path: "lobby", element: <LobbyPage /> },
-      { path: "turn", element: <TurnPage /> },
-      { path: "shop", element: <ShopPage /> },
-      { path: "rest", element: <RestPage /> },
-      { path: "treasure", element: <TreasurePage /> },
-      { path: "battle", element: <BattlePage /> },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: "lobby", element: <LobbyPage /> },
+          { path: "turn", element: <TurnPage /> },
+          { path: "shop", element: <ShopPage /> },
+          { path: "rest", element: <RestPage /> },
+          { path: "treasure", element: <TreasurePage /> },
+          { path: "battle", element: <BattlePage /> },
+        ]
+      },
       { path: "guide", element: <GuidePage /> },
     ],
   },

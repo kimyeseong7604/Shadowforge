@@ -12,6 +12,7 @@ export class ShopService {
     async getShopItems(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         const heartCount = user.gameData.maxHpBonusCount || 0;
 
@@ -33,6 +34,7 @@ export class ShopService {
     async usePotion(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (!user.gameData.potions || user.gameData.potions <= 0) {
             throw new BadRequestException('보유한 포션이 없습니다.');
@@ -59,6 +61,7 @@ export class ShopService {
     async equipItem(userId: number, itemId: string) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (!user.gameData.inventory.includes(itemId)) {
             throw new BadRequestException('인벤토리에 없는 아이템입니다.');
@@ -86,6 +89,7 @@ export class ShopService {
     async buyItem(userId: number, itemId: string) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (user.gameData.state !== GameState.SHOP) {
             throw new BadRequestException('상점이 아닙니다.');

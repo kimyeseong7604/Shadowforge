@@ -63,6 +63,8 @@ interface GameStore {
   escapeBattle: (userId: number) => Promise<void>;
   confirmRest: (userId: number) => Promise<void>;
   leaveShop: (userId: number) => Promise<void>;
+  loadUserData: () => Promise<void>;
+
 
   pushLog: (message: string | string[]) => void;
   toggleLog: () => void;
@@ -147,16 +149,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
 
       const newShopItems: ShopItem[] = data.shopItems.map((item: any) => ({
-      id: item.id as ShopItemId,
-      title: item.name || item.title,
-      img: FALLBACK_WEAPONS[item.id]?.img ?? (item.type === 'POTION' ? "/gadgets/포션.png" : "/gadgets/검.png"),
-      cost: item.price ?? item.cost ?? 0,
-      effectText: item.desc || item.effectText || `ATK +${item.atk}`,
-      type: item.type, // 서버에서 넘겨주는 타입 저장
-      weaponId: (item.type === 'WEAPON' || !item.type) && item.id !== 'POTION' ? item.id : undefined,
-      potionCount: item.type === 'POTION' ? 1 : undefined,
-      requiredStr: item.requiredStr ?? item.required_str ?? undefined, // <--- 여기 수정 (추가)
-    }));
+        id: item.id as ShopItemId,
+        title: item.name || item.title,
+        img: FALLBACK_WEAPONS[item.id]?.img ?? (item.type === 'POTION' ? "/gadgets/포션.png" : "/gadgets/검.png"),
+        cost: item.price ?? item.cost ?? 0,
+        effectText: item.desc || item.effectText || `ATK +${item.atk}`,
+        type: item.type, // 서버에서 넘겨주는 타입 저장
+        weaponId: (item.type === 'WEAPON' || !item.type) && item.id !== 'POTION' ? item.id : undefined,
+        potionCount: item.type === 'POTION' ? 1 : undefined,
+        requiredStr: item.requiredStr ?? item.required_str ?? undefined, // <--- 여기 수정 (추가)
+      }));
 
       set({ weapons: newWeapons, shopItems: newShopItems, isMetadataLoading: false });
     } catch (e: any) {
@@ -304,6 +306,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
+
+  loadUserData: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await api.me();
+      // 데이터가 존재할 때만 업데이트하여 레이스 컨디션으로 인한 null 덮어쓰기 방지
+      if (res && res.gameData) {
+        set({
+          gameData: res.gameData,
+          userId: res.id
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load user data", e);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+
 
   pushLog: (message: string | string[]) => {
     set((state) => {

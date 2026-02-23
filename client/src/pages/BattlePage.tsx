@@ -67,14 +67,13 @@ export default function BattlePage() {
   const storeNextIntent = useGameStore((s) => s.nextMonsterIntent);
   const storeCanSeeIntent = useGameStore((s) => s.canSeeIntent);
 
+
   useEffect(() => {
-    if (!gameData || !userId) {
-      navigate("/");
-      return;
+    if (gameData) {
+      setNextIntent(storeNextIntent);
+      setCanSeeIntent(storeCanSeeIntent);
     }
-    setNextIntent(storeNextIntent);
-    setCanSeeIntent(storeCanSeeIntent);
-  }, [gameData, userId, navigate, storeNextIntent, storeCanSeeIntent]);
+  }, [gameData, storeNextIntent, storeCanSeeIntent]);
 
   useEffect(() => {
     if (gameData?.state === "SELECTING" && !rewardOpen) {

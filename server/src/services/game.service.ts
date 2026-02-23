@@ -35,8 +35,8 @@ export class GameService {
         return this.shuffle(result);
     }
 
-    async startGame(userId: number) {
-        const initialData = {
+    public getInitialState() {
+        return {
             currentTurn: 1,
             state: GameState.SELECTING,
             options: this.generateOptions(),
@@ -55,11 +55,16 @@ export class GameService {
             maxHpBonusCount: 0,
             potionPurchaseCount: 0,
         };
+    }
 
-        const user = await this.userService.findOrCreateUser(userId, initialData);
+    async startGame(userId: number) {
+        const initialData = this.getInitialState();
 
-        // Existing user reset logic
-        if (user.gameData.currentTurn !== 1 || user.gameData.state !== GameState.SELECTING) {
+        // findOrCreateUser has been updated to not take second argument
+        const user = await this.userService.findOrCreateUser(userId);
+
+        // gameData가 없거나, 이미 진행중인 게임을 초기화해야 할 때
+        if (!user.gameData || user.gameData.currentTurn !== 1 || user.gameData.state !== GameState.SELECTING) {
             user.gameData = initialData;
             await this.userService.save(user);
         }
@@ -75,6 +80,7 @@ export class GameService {
     async nextTurn(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (user.gameData.state === GameState.GAME_OVER) {
             throw new BadRequestException('게임 오버 상태입니다.');
@@ -147,6 +153,7 @@ export class GameService {
     async selectOption(userId: number, selection: string) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (user.gameData.state === GameState.GAME_OVER) {
             throw new BadRequestException('이미 사망했습니다.');
@@ -227,6 +234,7 @@ export class GameService {
     async confirmRest(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         const healAmount = 30;
         user.gameData.hp = Math.min(user.gameData.maxHp, user.gameData.hp + healAmount);
@@ -238,6 +246,7 @@ export class GameService {
     async leaveShop(userId: number) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new NotFoundException(`User ${userId} not found`);
+        if (!user.gameData) throw new BadRequestException('진행 중인 게임이 없습니다.');
 
         if (user.gameData.state !== GameState.SHOP) {
             throw new BadRequestException('상점 상태가 아닙니다.');

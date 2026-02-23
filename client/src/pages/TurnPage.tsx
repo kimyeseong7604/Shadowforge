@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../stores/game.store";
 import type { TurnOption, TurnOptionType } from "../shared/api/types";
+
 import StageIndicators from "../components/StageIndicators";
 
 // Helper to map server option strings to UI cards
@@ -53,17 +54,12 @@ export default function TurnPage() {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [pressedIdx, setPressedIdx] = useState<number | null>(null);
 
+  // State-based redirection (e.g., if we are in a battle, go to BattlePage)
   useEffect(() => {
-    if (!gameData || !userId) {
-      navigate("/");
-      return;
-    }
-
-    // ✨ 전투 상태면 즉시 이동
-    if (gameData.state === 'BATTLE' || gameData.state === 'BOSS_BATTLE') {
+    if (gameData?.state === 'BATTLE' || gameData?.state === 'BOSS_BATTLE') {
       navigate('/battle');
     }
-  }, [gameData, userId, navigate]);
+  }, [gameData?.state, navigate]);
 
   const fetchMetadata = useGameStore((s) => s.fetchMetadata);
 

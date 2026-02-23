@@ -9,14 +9,20 @@ import { User } from '../entity/user.entity';
 import { Monster } from '../entity/monster.entity';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'public'),
       serveRoot: '/',
     }),
     TypeOrmModule.forRoot({
+
       type: 'mariadb',
       host: 'localhost',
       port: 3306,
@@ -27,7 +33,9 @@ import { join } from 'path';
       synchronize: true,
     }),
     TypeOrmModule.forFeature([User, Monster]),
+    AuthModule,
   ],
+
   controllers: [AppController],
   providers: [
     UserService,

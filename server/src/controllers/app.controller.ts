@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { UserService } from '../services/user.service';
 import { GameService } from '../services/game.service';
 import { BattleService } from '../services/battle.service';
@@ -6,7 +7,10 @@ import { ShopService } from '../services/shop.service';
 import { WEAPON_BOOK, SHOP_LIST } from '../data/items.data';
 
 @Controller()
+@UseGuards(AuthGuard('jwt'))
 export class AppController {
+
+
   constructor(
     private readonly userService: UserService,
     private readonly gameService: GameService,
@@ -15,75 +19,74 @@ export class AppController {
   ) { }
 
   @Post('game/start')
-  startGame(@Body() body: { userId: number }) {
-    return this.gameService.startGame(body.userId);
+  startGame(@Req() req: any) {
+    return this.gameService.startGame(req.user.userId);
   }
 
   @Get('users/me')
-  getMe() {
-    return this.userService.getMe(1); // Dev: Hardcode user 1
+  getMe(@Req() req: any) {
+    return this.userService.getMe(req.user.userId);
   }
 
   @Post('game/option')
-  selectOption(@Body() body: { userId: number, selection: string }) {
-    return this.gameService.selectOption(body.userId, body.selection);
+  selectOption(@Req() req: any, @Body() body: { selection: string }) {
+    return this.gameService.selectOption(req.user.userId, body.selection);
   }
 
   @Post('game/next')
-  nextTurn(@Body() body: { userId: number }) {
-    return this.gameService.nextTurn(body.userId);
+  nextTurn(@Req() req: any) {
+    return this.gameService.nextTurn(req.user.userId);
   }
 
+
   @Post('game/confirm-rest')
-  confirmRest(@Body() body: { userId: number }) {
-    return this.gameService.confirmRest(body.userId);
+  confirmRest(@Req() req: any) {
+    return this.gameService.confirmRest(req.user.userId);
   }
 
   @Post('battle')
-  battle(@Body() body: { userId: number, monsterId: number, action: string, useLucky?: boolean }) {
-    return this.battleService.battleAction(body.userId, body.monsterId, body.action, body.useLucky || false);
+  battle(@Req() req: any, @Body() body: { monsterId: number, action: string, useLucky?: boolean }) {
+    return this.battleService.battleAction(req.user.userId, body.monsterId, body.action, body.useLucky || false);
   }
 
   @Post('battle/reward')
-  claimReward(@Body() body: { userId: number, reward: 'STR' | 'AGI' | 'POTION' }) {
-    return this.battleService.claimVictoryReward(body.userId, body.reward);
+  claimReward(@Req() req: any, @Body() body: { reward: 'STR' | 'AGI' | 'POTION' }) {
+    return this.battleService.claimVictoryReward(req.user.userId, body.reward);
   }
 
   @Post('battle/escape')
-  escape(@Body() body: { userId: number }) {
-    return this.battleService.escape(body.userId);
+  escape(@Req() req: any) {
+    return this.battleService.escape(req.user.userId);
   }
 
   @Post('use-potion')
-  usePotion(@Body() body: { userId: number }) {
-    return this.shopService.usePotion(body.userId);
+  usePotion(@Req() req: any) {
+    return this.shopService.usePotion(req.user.userId);
   }
 
   @Post('equip-item')
-  equipItem(@Body() body: { userId: number, itemId: string }) {
-    return this.shopService.equipItem(body.userId, body.itemId);
+  equipItem(@Req() req: any, @Body() body: { itemId: string }) {
+    return this.shopService.equipItem(req.user.userId, body.itemId);
   }
 
   @Get('shop')
-  getShopItems(@Body() body: { userId: number }) {
-    // Note: userId is usually from auth, but using body for simplicity if it's a GET with query or similar.
-    // However, AppController uses Body for simple dev setup.
-    return this.shopService.getShopItems(body.userId || 1);
+  getShopItems(@Req() req: any) {
+    return this.shopService.getShopItems(req.user.userId);
   }
 
   @Post('buy-item')
-  buyItem(@Body() body: { userId: number, itemId: string }) {
-    return this.shopService.buyItem(body.userId, body.itemId);
+  buyItem(@Req() req: any, @Body() body: { itemId: string }) {
+    return this.shopService.buyItem(req.user.userId, body.itemId);
   }
 
   @Post('game/leave-shop')
-  leaveShop(@Body() body: { userId: number }) {
-    return this.gameService.leaveShop(body.userId);
+  leaveShop(@Req() req: any) {
+    return this.gameService.leaveShop(req.user.userId);
   }
 
   @Get('game/metadata')
-  async getMetadata(@Query('userId') userId: string) {
-    const uid = userId ? Number(userId) : 1;
+  async getMetadata(@Req() req: any) {
+    const uid = req.user.userId;
     let shopItems;
     try {
       const shopData = await this.shopService.getShopItems(uid);
@@ -104,4 +107,5 @@ export class AppController {
       shopItems: shopItems,
     };
   }
+
 }
