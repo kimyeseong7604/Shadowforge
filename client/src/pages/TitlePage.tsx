@@ -47,6 +47,27 @@ export default function TitlePage() {
           />
         </button>
 
+        {/* 로그인 버튼 (별도) */}
+        <button
+          type="button"
+          onClick={() => navigate("/login")} // <--- 여기 수정
+          aria-label="LOGIN"
+          className="
+            absolute top-4 right-4
+            rounded-xl
+            px-4 py-2
+            bg-black/55 text-white
+            border border-white/20
+            backdrop-blur-sm
+            transition-transform duration-150 ease-out
+            hover:-translate-y-[2px] hover:scale-[1.02]
+            active:translate-y-[1px] active:scale-[0.98]
+            focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-black
+          "
+        >
+          로그인
+        </button>
+
         {/* 비네팅: 클릭 방해 X */}
         <div
           className="pointer-events-none absolute inset-0"

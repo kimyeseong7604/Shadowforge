@@ -8,6 +8,7 @@ import RestPage from "../pages/RestPage";
 import TreasurePage from "../pages/TreasurePage";
 import BattlePage from "../pages/BattlePage";
 import GuidePage from "../pages/GuidePage";
+import LoginPage from "../pages/LoginPage";
 
 const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
     element: <MainLayout />,
     children: [
       { index: true, element: <TitlePage /> },
+      { path: "login", element: <LoginPage /> },
       { path: "lobby", element: <LobbyPage /> },
       { path: "turn", element: <TurnPage /> },
       { path: "shop", element: <ShopPage /> },
