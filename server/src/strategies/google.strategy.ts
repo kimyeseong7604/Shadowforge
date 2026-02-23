@@ -10,10 +10,19 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         private configService: ConfigService,
         private authService: AuthService,
     ) {
+        const clientID = configService.get<string>('GOOGLE_CLIENT_ID');
+        const clientSecret = configService.get<string>('GOOGLE_CLIENT_SECRET');
+        const callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL');
+
+        if (!clientID || !clientSecret || !callbackURL) {
+            console.error('❌ [Auth] Google OAuth environment variables are missing!');
+            console.error('Check if .env file exists in the /server folder and contains GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_CALLBACK_URL.');
+        }
+
         super({
-            clientID: configService.get<string>('GOOGLE_CLIENT_ID') || '',
-            clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET') || '',
-            callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL') || '',
+            clientID: clientID || 'missing',
+            clientSecret: clientSecret || 'missing',
+            callbackURL: callbackURL || 'missing',
             scope: ['email', 'profile'],
         });
     }
