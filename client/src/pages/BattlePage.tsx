@@ -55,6 +55,7 @@ export default function BattlePage() {
   const [shakeEnemy, setShakeEnemy] = useState(false);
   const [luckyChecked, setLuckyChecked] = useState(false);
   const [rewardOpen, setRewardOpen] = useState(false);
+  const [endingOpen, setEndingOpen] = useState(false);
   const [escapeHover, setEscapeHover] = useState(false);
 
   const isVictory = (monster?.hp ?? 0) <= 0;
@@ -76,10 +77,10 @@ export default function BattlePage() {
   }, [gameData, storeNextIntent, storeCanSeeIntent]);
 
   useEffect(() => {
-    if (gameData?.state === "SELECTING" && !rewardOpen) {
+    if (gameData?.state === "SELECTING" && !rewardOpen && !endingOpen) { // <--- 여기 수정
       navigate("/turn");
     }
-  }, [gameData?.state, navigate, rewardOpen]);
+  }, [gameData?.state, navigate, rewardOpen, endingOpen]);
 
   const triggerShakePlayer = () => {
     setShakePlayer(true);
@@ -101,7 +102,10 @@ export default function BattlePage() {
         luckyChecked && action !== "DEFENSE"
       );
 
-      if (res.result === "WIN") setRewardOpen(true);
+      if (res.result === "WIN") {
+      if (isBossBattle) setEndingOpen(true); 
+      else setRewardOpen(true);              
+      }
 
       if (action === "ATTACK" || action === "STRONG_ATTACK") triggerShakeEnemy();
       if (res.monsterAction === "ATTACK") triggerShakePlayer();
@@ -161,7 +165,7 @@ export default function BattlePage() {
 
   if (!gameData) return <div style={styles.page}>Loading Battle...</div>;
   if (isInBattle && !monster && isLoading) return <div style={styles.page}>Loading Battle...</div>;
-  if (!isInBattle && !rewardOpen) return null;
+  if (!isInBattle && !rewardOpen && !endingOpen) return null; 
 
   return (
     <div style={styles.page}>
@@ -243,7 +247,28 @@ export default function BattlePage() {
               </div>
             </div>
           )}
+           {endingOpen && ( // <--- 여기 수정 (추가 시작)
+            <div style={styles.overlay}>
+              <div style={styles.overlayContent}>
+                <div style={{ ...styles.overlayTitle, letterSpacing: 2 }}>VICTORY</div>
+                <div style={styles.overlaySub}>
+                  당신의 여정은 전설이 되었습니다.
+                </div>
 
+                <div style={{ opacity: 0.75, marginTop: 10, lineHeight: 1.6 }}>
+                  Shadowforge<br />
+                  Thanks for playing.
+                </div>
+
+                <button
+                  style={{ ...styles.exitBtn, marginTop: 18 }}
+                  onClick={() => navigate("/")} // <--- 여기 수정 (타이틀로)
+                >
+                  타이틀로
+                </button>
+              </div>
+            </div>
+          )}
           {rewardOpen && <VictoryOverlay onPickReward={onPickReward} styles={styles} />}
         </div>
       </div>

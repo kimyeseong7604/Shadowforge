@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth.store";
 import { useGameStore } from "../../stores/game.store";
@@ -15,31 +15,39 @@ export default function ProtectedRoute() {
     const { accessToken } = useAuthStore();
     const { gameData, isLoading, loadUserData } = useGameStore();
     const [isChecking, setIsChecking] = useState(true);
+    const hasTriedRecoveryRef = useRef(false);
 
     useEffect(() => {
-        const checkAuth = async () => {
-            const storedToken = localStorage.getItem("sf_access_token");
+    const checkAuth = async () => {
+        const storedToken = localStorage.getItem("sf_access_token");
 
-            // 1. 토큰이 아예 없는 경우 -> 로그인으로 튕김
-            if (!accessToken && !storedToken) {
-                setIsChecking(false);
-                return;
-            }
-
-            // 2. 토큰은 있는데 gameData가 없는 경우 (새로고침 직후 등) -> 데이터 복구 시도
-            if (!gameData && !isLoading) {
-                try {
-                    await loadUserData();
-                } catch (e) {
-                    console.error("Session recovery failed", e);
-                }
-            }
-
+        // 1. 토큰이 아예 없는 경우 -> 로그인으로 튕김
+        if (!accessToken && !storedToken) {
             setIsChecking(false);
-        };
+            return;
+        }
 
-        checkAuth();
-    }, [accessToken, gameData, isLoading, loadUserData]);
+        // 2. 이미 게임 데이터가 있으면 바로 통과
+        if (gameData) { // <--- 여기 수정
+            setIsChecking(false);
+            return;
+        }
+
+        // 3. 토큰은 있는데 gameData가 없는 경우 -> 복구는 1회만 시도
+        if (!hasTriedRecoveryRef.current) { // <--- 여기 수정
+            hasTriedRecoveryRef.current = true; // <--- 여기 수정
+            try {
+                await loadUserData();
+            } catch (e) {
+                console.error("Session recovery failed", e);
+            }
+        }
+
+        setIsChecking(false);
+    };
+
+    checkAuth();
+}, [accessToken, loadUserData]); // <--- 여기 수정
 
     // 초기 토큰 확인 및 데이터 로딩 중 가드
     if (isChecking || (localStorage.getItem("sf_access_token") && !gameData && isLoading)) {
