@@ -92,7 +92,8 @@ export class AppController {
         title: item.name,
         price: item.price,
         type: item.type || (item.id === 'POTION' ? 'POTION' : item.id === 'HEART' ? 'HEART' : 'WEAPON'),
-        effectText: item.desc || (item as any).effectText
+        effectText: item.desc || (item as any).effectText,
+        value: (item as any).value
       }));
     } catch (e) {
       shopItems = SHOP_LIST;

@@ -102,27 +102,27 @@ export const MONSTER_BOOK: MonsterSpec[] = [
     // =======================================================
     {
         id: 101, name: '부패의 군주', grade: MonsterGrade.BOSS, minTurn: 5,
-        baseHp: 120, baseAtk: 10, def: 3, baseAgi: 5, exp: 100, gold: 200,
+        baseHp: 96, baseAtk: 10, def: 3, baseAgi: 5, exp: 100, gold: 200,
         image: 'lord_rot.png'
     },
     {
         id: 102, name: '백골의 군주', grade: MonsterGrade.BOSS, minTurn: 5,
-        baseHp: 110, baseAtk: 12, def: 5, baseAgi: 18, exp: 120, gold: 250,
+        baseHp: 88, baseAtk: 12, def: 5, baseAgi: 18, exp: 120, gold: 250,
         image: 'lord_bone.png'
     },
     {
         id: 103, name: '대지의 군주', grade: MonsterGrade.BOSS, minTurn: 5,
-        baseHp: 200, baseAtk: 8, def: 15, baseAgi: 2, exp: 150, gold: 300,
+        baseHp: 160, baseAtk: 8, def: 15, baseAgi: 2, exp: 150, gold: 300,
         image: 'lord_earth.png'
     },
     {
         id: 104, name: '어둠의 군주', grade: MonsterGrade.BOSS, minTurn: 5,
-        baseHp: 150, baseAtk: 13, def: 8, baseAgi: 15, exp: 200, gold: 400,
+        baseHp: 120, baseAtk: 13, def: 8, baseAgi: 15, exp: 200, gold: 400,
         image: 'lord_dark.png'
     },
     {
         id: 105, name: '죽음의 군주', grade: MonsterGrade.BOSS, minTurn: 5,
-        baseHp: 180, baseAtk: 15, def: 10, baseAgi: 20, exp: 300, gold: 500,
+        baseHp: 144, baseAtk: 15, def: 10, baseAgi: 20, exp: 300, gold: 500,
         image: 'lord_death.png'
     }
 ];
