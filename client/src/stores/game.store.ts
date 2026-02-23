@@ -4,7 +4,7 @@ import type { GameData, WeaponId, ShopItemId, InventoryItem, Monster } from "../
 
 // ✅ UI 표시용 정적 데이터 (Fallback 용도 - 서버 연결 실패 시 사용)
 const FALLBACK_WEAPONS: Record<string, InventoryItem> = {
-  NO_SWORD: { id: "NO_SWORD" as WeaponId, name: "무기 없음", atk: 0, img: "/gadgets/검.png" },
+  NO_SWORD: { id: "NO_SWORD" as WeaponId, name: "무기 없음", atk: 0, img: "" },
   NORMAL_SWORD: { id: "NORMAL_SWORD" as WeaponId, name: "노말 검", atk: 2, img: "/gadgets/노말검.png" },
   SWORD: { id: "SWORD" as WeaponId, name: "검", atk: 3, img: "/gadgets/검.png" },
   RARE_SWORD: { id: "RARE_SWORD" as WeaponId, name: "레어 검", atk: 5, img: "/gadgets/레어검.png" },
@@ -141,14 +141,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
           id: spec.id as WeaponId,
           name: spec.name,
           atk: spec.atk,
-          img: FALLBACK_WEAPONS[key]?.img || "/gadgets/검.png"
+          img: FALLBACK_WEAPONS[key]?.img ?? "/gadgets/검.png"
         };
       });
 
       const newShopItems: ShopItem[] = data.shopItems.map((item: any) => ({
         id: item.id as ShopItemId,
         title: item.name || item.title,
-        img: FALLBACK_WEAPONS[item.id]?.img || (item.type === 'POTION' ? "/gadgets/포션.png" : "/gadgets/검.png"),
+        img: FALLBACK_WEAPONS[item.id]?.img ?? (item.type === 'POTION' ? "/gadgets/포션.png" : "/gadgets/검.png"),
         cost: item.price ?? item.cost ?? 0,
         effectText: item.desc || item.effectText || `ATK +${item.atk}`,
         type: item.type, // 서버에서 넘겨주는 타입 저장

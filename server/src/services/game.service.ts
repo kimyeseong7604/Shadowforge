@@ -194,7 +194,7 @@ export class GameService {
             await this.userService.save(user);
             return {
                 message: '보물 발견!',
-                description: `${rewardGold}G 획득`,
+                // description: `${rewardGold}G 획득`, // 클라이언트에서 직접 로그 출력하도록 변경
                 rewardGold,
                 gold: user.gameData.gold,
                 state: 'TREASURE'

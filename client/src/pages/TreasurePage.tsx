@@ -24,7 +24,7 @@ export default function TreasurePage() {
 
   useEffect(() => {
     if (!toastVisible) return;
-    const t = window.setTimeout(() => setToastVisible(false), );
+    const t = window.setTimeout(() => setToastVisible(false),);
     return () => window.clearTimeout(t);
   }, [toastVisible]);
 
@@ -34,6 +34,7 @@ export default function TreasurePage() {
 
     setClaimed(true);
     setChestImg(CHEST_3);
+    useGameStore.getState().pushLog(`${rewardGold}G 획득`); // 로그 수동 출력
 
     window.setTimeout(async () => {
       await nextTurn(userId);
@@ -125,7 +126,7 @@ export default function TreasurePage() {
 
               {/* 오른쪽: 텍스트/버튼 */}
               <div style={{ textAlign: "left" }}>
-              <div style={{ opacity: 0.9, marginBottom: 18 }}>
+                <div style={{ opacity: 0.9, marginBottom: 18 }}>
                   상자를 열어 골드를 획득할 수 있다.
                 </div>
 
@@ -165,7 +166,7 @@ export default function TreasurePage() {
                     "상자 열기"                                           /* <--- 여기 수정 */
                   )}
                 </button>
-                
+
                 {/* ✅ 안내 문구: 너무 빨리 안 사라지도록 */}
                 <div
                   style={{

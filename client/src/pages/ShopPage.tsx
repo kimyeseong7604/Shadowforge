@@ -49,11 +49,13 @@ export default function ShopPage() {
 
   const cartCount = useMemo(() => cart.reduce((a, b) => a + b.qty, 0), [cart]);
 
-  const isWeapon = (item: ShopItem) => item.id !== "POTION";
+  const isWeapon = (item: ShopItem) => item.id !== "POTION" && item.id !== "HEART"; // ❤️ HEART 제외
   const isOwnedWeapon = (item: ShopItem) => isWeapon(item) && ownedWeapons.includes(item.weaponId!);
 
   const addToCart = (item: ShopItem) => {
     setNotice("");
+
+    // 1. 무기 체크
     if (isWeapon(item)) {
       if (isOwnedWeapon(item)) {
         setNotice("이미 보유 중인 무기입니다.");
@@ -61,6 +63,14 @@ export default function ShopPage() {
       }
       if (cart.some((c) => c.id === item.id)) {
         setNotice("무기 종류는 하나만 선택할 수 있습니다.");
+        return;
+      }
+    }
+
+    // 2. 생명의 정수 체크 (한 번에 하나만)
+    if (item.id === "HEART") {
+      if (cart.some((c) => c.id === item.id)) {
+        setNotice("생명의 정수는 한번씩 구매해주시기 바랍니다.");
         return;
       }
     }

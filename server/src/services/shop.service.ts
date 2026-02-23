@@ -90,6 +90,10 @@ export class ShopService {
             itemPrice = 10;
             itemName = '포션';
             isPotion = true;
+        } else if (itemId === 'HEART') {
+            const heartCount = user.gameData.maxHpBonusCount || 0;
+            itemPrice = Math.floor(50 * Math.pow(1.5, heartCount));
+            itemName = '생명의 정수';
         } else if (WEAPON_BOOK[itemId]) {
             itemPrice = WEAPON_BOOK[itemId].price;
             itemName = WEAPON_BOOK[itemId].name;
@@ -109,8 +113,15 @@ export class ShopService {
         if (isPotion) {
             user.gameData.potions = (user.gameData.potions || 0) + 1;
             user.gameData.potionPurchaseCount = (user.gameData.potionPurchaseCount || 0) + 1;
+        } else if (itemId === 'HEART') {
+            user.gameData.maxHp += 20;
+            user.gameData.hp += 20;
+            user.gameData.maxHpBonusCount = (user.gameData.maxHpBonusCount || 0) + 1;
         } else {
-            user.gameData.inventory.push(itemId);
+            // 무기 구매 시
+            if (!user.gameData.inventory.includes(itemId)) {
+                user.gameData.inventory.push(itemId);
+            }
         }
 
         await this.userService.save(user);

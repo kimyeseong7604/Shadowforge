@@ -153,7 +153,7 @@ export default function BattlePage() {
     }
   };
 
-  const weaponIcon = weapons[equippedWeaponId as string]?.img ?? "/gadgets/검.png";
+  const weaponIcon = weapons[equippedWeaponId as string]?.img ?? "";
   const isBossBattle = gameData?.state === "BOSS_BATTLE";
   const bgImg = isBossBattle ? `${BATTLE_DIR}/Bossbg.png` : `${BATTLE_DIR}/monsterbg.png`;
   const playerImg = isBossBattle ? `${BATTLE_DIR}/boss vs player.png` : `${BATTLE_DIR}/vs player.png`;
@@ -180,22 +180,22 @@ export default function BattlePage() {
             styles={styles}
           />
 
-            <button
+          <button
             type="button"
             style={{
-              ...styles.escapeBtn, 
-              ...(escapeHover ? styles.escapeBtnHover : null), 
+              ...styles.escapeBtn,
+              ...(escapeHover ? styles.escapeBtnHover : null),
             }}
             onClick={onEscape}
-            onMouseEnter={() => setEscapeHover(true)} 
-            onMouseLeave={() => setEscapeHover(false)} 
-            aria-label="도망" 
+            onMouseEnter={() => setEscapeHover(true)}
+            onMouseLeave={() => setEscapeHover(false)}
+            aria-label="도망"
           >
             <img
-              src="/battle/run.png" 
+              src="/battle/run.png"
               alt="도망"
-              style={styles.escapeImg} 
-              draggable={false} 
+              style={styles.escapeImg}
+              draggable={false}
             />
           </button>
 
@@ -236,11 +236,11 @@ export default function BattlePage() {
           {isDefeat && (
             <div style={styles.overlay}>
               <div style={styles.overlayContent}>
-              <div style={styles.overlayTitle}>DEFEAT</div>
-              <div style={styles.overlaySub}>여정은 여기까지입니다...</div>
-              <button style={styles.exitBtn} onClick={() => navigate("/")}>
-                타이틀로 이동
-              </button>
+                <div style={styles.overlayTitle}>DEFEAT</div>
+                <div style={styles.overlaySub}>여정은 여기까지입니다...</div>
+                <button style={styles.exitBtn} onClick={() => navigate("/")}>
+                  타이틀로 이동
+                </button>
               </div>
             </div>
           )}
@@ -310,7 +310,7 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: "none",
   },
 
-    escapeBtn: {
+  escapeBtn: {
     position: "absolute",
     top: 20,
     right: 20,
@@ -349,7 +349,7 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: 12,
   },
-    intentBoxWrap: {
+  intentBoxWrap: {
     position: "relative",
     width: 160, // <--- 여기를 수정 (의도 박스 표시 크기)
     height: 40, // <--- 여기를 수정
@@ -545,7 +545,7 @@ const styles: Record<string, CSSProperties> = {
   },
   playerTitle: { fontWeight: 900, fontSize: 13, letterSpacing: 1, opacity: 0.6 },
   playerHpText: { fontWeight: 800, fontSize: 16 },
-  
+
   playerHpBarOuter: {
     width: "100%",
     height: 10,
@@ -556,7 +556,7 @@ const styles: Record<string, CSSProperties> = {
     border: "1px solid rgba(255,255,255,0.08)", // <--- 여기를 수정 (얇은 테두리)
     boxShadow: "inset 0 1px 3px rgba(0,0,0,0.65)", // <--- 여기를 수정 (홈에 들어간 느낌)
   },
-  
+
   playerHpBarInner: {
     height: "100%",
     borderRadius: 3, // <--- 여기를 수정 (outer와 통일)

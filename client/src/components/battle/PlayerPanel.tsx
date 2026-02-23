@@ -253,7 +253,7 @@ export default function PlayerPanel({
         >
           <div style={{ position: "relative", width: "100%", height: "100%" }}>
             <img src={IMG_SWORD_BOX} alt="" draggable={false} style={slotFrame} />
-            <img src={weaponIcon} alt="" draggable={false} style={weaponImg} />
+            {!!weaponIcon && <img src={weaponIcon} alt="" draggable={false} style={weaponImg} />}
           </div>
         </button>
 
