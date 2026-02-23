@@ -100,7 +100,7 @@ export default function ShopPage() {
       }
       setCart([]);
       setNotice("구매를 완료했습니다!");
-    } catch (e) {
+    } catch {
       setNotice("구매 도중 오류가 발생했습니다.");
     }
   };
@@ -155,7 +155,12 @@ export default function ShopPage() {
                     onClick={() => !owned && addToCart(item)}
                   >
                     <div style={styles.cardIconBox}>
-                      <img src={item.img} alt={item.title} style={styles.cardImg} draggable={false} />
+                      <img
+                        src={item.id === "HEART" ? "/gadgets/heart.png" : item.img} // <--- 여기 수정
+                        alt={item.title}
+                        style={item.id === "HEART" ? { ...styles.cardImg, width: 76, height: 76 } : styles.cardImg}
+                        draggable={false}
+                      />
                     </div>
                     <div style={styles.cardInfo}>
                       <div style={styles.cardTitleLine}>
@@ -163,7 +168,10 @@ export default function ShopPage() {
                         {owned && <div style={styles.ownedBadge}>보유</div>}
                       </div>
                       <div style={styles.cardEffect}>{item.effectText}</div>
-                      <div style={styles.cardPrice}>{formatGold(item.cost)}</div>
+                        {isWeapon(item) && typeof item.requiredStr === "number" && ( // <--- 여기 수정
+                          <div style={styles.requiredStr}>필요 STR: {item.requiredStr}</div> // <--- 여기 수정
+                        )}
+                        <div style={styles.cardPrice}>{formatGold(item.cost)}</div>
                     </div>
                     {!owned && (
                       <div style={{
@@ -263,4 +271,5 @@ const styles: Record<string, CSSProperties> = {
   totalRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
   notice: { fontSize: 14, textAlign: "center", marginBottom: 18, minHeight: 18, fontWeight: 800 },
   checkoutBtn: { width: "100%", height: 58, borderRadius: 18, border: "none", background: "#ffd43b", color: "#000", fontSize: 20, fontWeight: 950, transition: "all 0.3s ease" },
+  requiredStr: { fontSize: 13, opacity: 0.75, fontWeight: 800 }, // <--- 여기 수정
 };
