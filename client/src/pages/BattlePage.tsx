@@ -103,8 +103,8 @@ export default function BattlePage() {
       );
 
       if (res.result === "WIN") {
-      if (isBossBattle) setEndingOpen(true); 
-      else setRewardOpen(true);              
+        if (isBossBattle && stage === 15) setEndingOpen(true); // <--- 여기 수정
+        else setRewardOpen(true);                               // <--- 여기 수정
       }
 
       if (action === "ATTACK" || action === "STRONG_ATTACK") triggerShakeEnemy();
