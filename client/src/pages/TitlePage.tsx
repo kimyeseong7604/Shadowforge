@@ -1,10 +1,20 @@
-// client/src/pages/TitlePage.tsx
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../stores/auth.store";
 
 export default function TitlePage() {
   const navigate = useNavigate();
-  const { accessToken, logout } = useAuthStore();
+  const [searchParams] = useSearchParams();
+  const { accessToken, logout, setToken } = useAuthStore();
+
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      setToken(token);
+      // URL에서 토큰 파라미터 제거
+      navigate("/", { replace: true });
+    }
+  }, [searchParams, setToken, navigate]);
 
   const handleAuthAction = () => {
     if (accessToken) {
