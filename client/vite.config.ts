@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/monsters': {
-        target: 'http://localhost:3000',
+        target: 'https://shadowforge.onrender.com',
         changeOrigin: true,
       },
     },

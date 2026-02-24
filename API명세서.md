@@ -1,6 +1,6 @@
 # Shadowforge - API 명세서 (v1.0)
 
-**Base URL:** http://localhost:3000/api (개발 환경)
+**Base URL:** https://shadowforge.onrender.com/api (개발 환경)
 
 **인증 방식:** Header에 "Authorization: Bearer <Access_Token>" 추가
 

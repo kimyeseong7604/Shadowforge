@@ -25,8 +25,8 @@ cd server
 npm install
 npm run start:dev
 ```
-- 서버는 기본적으로 `http://localhost:3000`에서 실행됩니다.
-- API 엔드포인트는 `http://localhost:3000/api` 입니다.
+- 서버는 기본적으로 `https://shadowforge.onrender.com`에서 실행됩니다.
+- API 엔드포인트는 `https://shadowforge.onrender.com/api` 입니다.
 
 ## 4. 클라이언트 (Client) 실행
 ```bash

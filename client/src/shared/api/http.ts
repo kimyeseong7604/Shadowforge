@@ -3,7 +3,7 @@ import { env } from "../config/env";
 import { useAuthStore } from "../../stores/auth.store";
 
 export const http = axios.create({
-  baseURL: env.API_BASE_URL, // 예: http://localhost:3000/api
+  baseURL: env.API_BASE_URL,
   timeout: 10_000,
 });
 
