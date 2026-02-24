@@ -9,7 +9,7 @@ import { User } from '../entity/user.entity';
 import { Monster } from '../entity/monster.entity';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth.module';
 
 @Module({
@@ -21,16 +21,18 @@ import { AuthModule } from './auth.module';
       rootPath: join(__dirname, '..', '..', 'public'),
       serveRoot: '/',
     }),
-    TypeOrmModule.forRoot({
-
-      type: 'mariadb',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: 'root',
-      database: 'game_db',
-      entities: [User, Monster],
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USER'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [User, Monster],
+        synchronize: true,
+      }),
     }),
     TypeOrmModule.forFeature([User, Monster]),
     AuthModule,
